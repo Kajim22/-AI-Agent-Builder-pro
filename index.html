@@ -369,7 +369,7 @@ input::placeholder,textarea::placeholder{color:var(--text3);}
               <div class="int-card" id="c-fb" onclick="toggleConn('fb')"><span class="int-icon">📘</span><div><div class="int-name">Facebook Page</div><div class="int-status" id="s-fb">কানেক্ট করুন</div></div></div>
               <div class="int-card" id="c-ig" onclick="toggleConn('ig')"><span class="int-icon">📸</span><div><div class="int-name">Instagram</div><div class="int-status" id="s-ig">কানেক্ট করুন</div></div></div>
               <div class="int-card" id="c-wa" onclick="toggleConn('wa')"><span class="int-icon">💬</span><div><div class="int-name">WhatsApp Business</div><div class="int-status" id="s-wa">কানেক্ট করুন</div></div></div>
-              <div class="int-card" id="c-tg" onclick="toggleConn('tg')"><span class="int-icon">✈️</span><div><div class="int-name">Telegram Bot</div><div class="int-status" id="s-tg">কানেক্ট করুন</div></div></div>
+              <div class="int-card" id="c-tg" onclick="connectTelegram()"><span class="int-icon">✈️</span><div><div class="int-name">Telegram Bot</div><div class="int-status" id="s-tg">কানেক্ট করুন</div></div></div>
               <div class="int-card" id="c-tw" onclick="toggleConn('tw')"><span class="int-icon">🐦</span><div><div class="int-name">Twitter / X</div><div class="int-status" id="s-tw">কানেক্ট করুন</div></div></div>
               <div class="int-card" id="c-yt" onclick="toggleConn('yt')"><span class="int-icon">▶️</span><div><div class="int-name">YouTube Comments</div><div class="int-status" id="s-yt">কানেক্ট করুন</div></div></div>
             </div>
@@ -570,8 +570,6 @@ async function sendMsg() {
   const agent = agents.find(x => x.id === activeId);
   const apiKey = document.getElementById('api-key-test').value.trim() || cfg.key || '';
   
-  // আমরা এখন সরাসরি আপনার ব্যাকএন্ডে কল করছি, তাই ফ্রন্টএন্ডে API Key পাঠানোর প্রয়োজন নেই, 
-  // তবে চাইলে রাখতে পারেন। ব্যাকএন্ড থেকেই মূল API কল হবে।
   inp.value = '';
   rmEmpty();
   addBubble(msg, 'user');
@@ -582,7 +580,6 @@ async function sendMsg() {
   setBadge('Thinking...', 'yellow');
 
   try {
-    // এখানে আপনার Render-এ হোস্ট করা ব্যাকএন্ডের URL টি দিন
     const res = await fetch('https://kajim-ai-agent-backend.onrender.com/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -621,6 +618,31 @@ async function sendMsg() {
   }
 }
 
+async function connectTelegram(){
+  if(!activeId){ toast('আগে একটা এজেন্ট সিলেক্ট করুন','error'); return; }
+  const agent = agents.find(x => x.id === activeId);
+  const botToken = prompt('BotFather থেকে পাওয়া Bot Token পেস্ট করুন:');
+  if(!botToken) return;
+
+  toast('কানেক্ট করা হচ্ছে...','success');
+  try{
+    const res = await fetch('https://kajim-ai-agent-backend.onrender.com/telegram/connect', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ botToken, systemPrompt: agent.prompt })
+    });
+    const data = await res.json();
+    if(data.success){
+      document.getElementById('c-tg').classList.add('connected');
+      document.getElementById('s-tg').textContent = '✅ কানেক্টেড: ' + agent.name;
+      toast('✅ Telegram Bot কানেক্ট হয়েছে!','success');
+    } else {
+      toast('এরর: '+(data.error||'অজানা সমস্যা'),'error');
+    }
+  }catch(err){
+    toast('সার্ভার এরর: '+err.message,'error');
+  }
+}
 
 function addBubble(t,type){
   const a=document.getElementById('chat-area');
