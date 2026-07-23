@@ -510,12 +510,12 @@ function showSection(n){
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
   document.getElementById('section-'+n).classList.add('active');
   document.getElementById('nav-'+n).classList.add('active');
-  const t={build:'⚡ এজেন্ট তৈরি করুন',test:'🧪 টেস্ট সেন্টার',connect:'🔗 ইন্টিগ্রেশন',analytics:'📊 অ্যানালিটিক্স',settings:'⚙️ সেটিংস'};
+  const t={build:'⚡ এজেন্ট তৈরি করুন',test:'🧪 টেস্ট সেন্টার',connect:'🔗 ইন্টিগ্রেশন',knowledge:'📚 Knowledge Base',analytics:'📊 অ্যানালিটিক্স',settings:'⚙️ সেটিংস'};
   document.getElementById('page-title').textContent = t[n]||'';
   if(n==='analytics') updateStats();
+  if(n==='knowledge') populateKnowledgeAgentSelect();
   closeSidebar();
 }
-
 function renderAgents(){
   const list = document.getElementById('agent-list');
   const sel = document.getElementById('agent-select');
