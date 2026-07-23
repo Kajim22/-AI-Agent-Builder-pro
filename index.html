@@ -479,7 +479,8 @@ input::placeholder,textarea::placeholder{color:var(--text3);}
 
 <div class="toast" id="toast"></div>
 
-           <script>
+                 
+<script>
 let agents = JSON.parse(localStorage.getItem('ah_agents')||'[]');
 let activeId = null;
 let history = [];
@@ -608,7 +609,8 @@ async function sendMsg() {
       body: JSON.stringify({ 
         message: msg, 
         systemPrompt: agent.prompt || 'তুমি একজন সহকারী।',
-        history: history 
+        history: history,
+        agentId: agent.id
       })
     });
 
@@ -651,7 +653,7 @@ async function connectTelegram(){
     const res = await fetch('https://kajim-ai-agent-backend.onrender.com/telegram/connect', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ botToken, systemPrompt: agent.prompt })
+      body: JSON.stringify({ botToken, systemPrompt: agent.prompt, agentId: agent.id })
     });
     const data = await res.json();
     if(data.success){
@@ -785,6 +787,97 @@ function toast(msg,type=''){
   t.textContent=msg; t.className=`toast ${type} show`;
   setTimeout(()=>t.classList.remove('show'),3500);
 }
-</script>             
+
+// ==== Knowledge Base ====
+
+function populateKnowledgeAgentSelect(){
+  const sel = document.getElementById('knowledge-agent-select');
+  sel.innerHTML = '';
+  if(agents.length === 0){
+    sel.innerHTML = '<option value="">কোনো এজেন্ট নেই — আগে একটা বানান</option>';
+    document.getElementById('knowledge-list').innerHTML = '';
+    return;
+  }
+  agents.forEach(a=>{
+    const opt = document.createElement('option');
+    opt.value = a.id;
+    opt.textContent = a.name;
+    sel.appendChild(opt);
+  });
+  if(activeId) sel.value = activeId;
+  loadKnowledge();
+}
+
+async function loadKnowledge(){
+  const agentId = document.getElementById('knowledge-agent-select').value;
+  const listDiv = document.getElementById('knowledge-list');
+  if(!agentId){ listDiv.innerHTML=''; return; }
+
+  listDiv.innerHTML = '<p style="color:var(--text3);font-size:12px;">লোড হচ্ছে...</p>';
+  try{
+    const res = await fetch(`https://kajim-ai-agent-backend.onrender.com/knowledge/list/${agentId}`);
+    const rows = await res.json();
+    if(!Array.isArray(rows) || rows.length===0){
+      listDiv.innerHTML = '<p style="color:var(--text3);font-size:12px;">এখনো কোনো তথ্য যোগ করা হয়নি।</p>';
+      return;
+    }
+    listDiv.innerHTML = rows.map(r=>`
+      <div class="agent-row">
+        <span style="font-size:13px;flex:1;">${r.content}</span>
+        <button class="btn btn-danger btn-sm" onclick="deleteKnowledge(${r.id})">🗑️</button>
+      </div>
+    `).join('');
+  }catch(err){
+    listDiv.innerHTML = '<p style="color:var(--red);font-size:12px;">লোড করা যায়নি: '+err.message+'</p>';
+  }
+}
+
+async function addKnowledge(){
+  const agentId = document.getElementById('knowledge-agent-select').value;
+  const input = document.getElementById('knowledge-input');
+  const content = input.value.trim();
+  if(!agentId){ toast('আগে একটা এজেন্ট বেছে নিন','error'); return; }
+  if(!content){ toast('তথ্য লিখুন','error'); return; }
+
+  try{
+    const res = await fetch('https://kajim-ai-agent-backend.onrender.com/knowledge/add', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ agentId, content })
+    });
+    const data = await res.json();
+    if(data.success){
+      input.value='';
+      toast('✅ তথ্য যোগ হয়েছে','success');
+      loadKnowledge();
+    }else{
+      toast('এরর: '+(data.error||'অজানা সমস্যা'),'error');
+    }
+  }catch(err){
+    toast('সার্ভার এরর: '+err.message,'error');
+  }
+}
+
+async function deleteKnowledge(id){
+  if(!confirm('এই তথ্যটা মুছে ফেলবেন?')) return;
+  try{
+    const res = await fetch('https://kajim-ai-agent-backend.onrender.com/knowledge/delete', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ id })
+    });
+    const data = await res.json();
+    if(data.success){
+      toast('🗑️ মুছে ফেলা হয়েছে','success');
+      loadKnowledge();
+    }else{
+      toast('এরর: '+(data.error||'অজানা সমস্যা'),'error');
+    }
+  }catch(err){
+    toast('সার্ভার এরর: '+err.message,'error');
+  }
+}
+</script>
+
 </body>
 </html>
