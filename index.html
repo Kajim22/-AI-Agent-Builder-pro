@@ -525,12 +525,47 @@ function showSection(n){
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
   document.getElementById('section-'+n).classList.add('active');
   document.getElementById('nav-'+n).classList.add('active');
-  const t={build:'⚡ এজেন্ট তৈরি করুন',test:'🧪 টেস্ট সেন্টার',connect:'🔗 ইন্টিগ্রেশন',knowledge:'📚 Knowledge Base',analytics:'📊 অ্যানালিটিক্স',settings:'⚙️ সেটিংস'};
+  const t={build:'⚡ এজেন্ট তৈরি করুন',test:'🧪 টেস্ট সেন্টার',connect:'🔗 ইন্টিগ্রেশন',knowledge:'📚 Knowledge Base',orders:'🛒 অর্ডারসমূহ',analytics:'📊 অ্যানালিটিক্স',settings:'⚙️ সেটিংস'};
   document.getElementById('page-title').textContent = t[n]||'';
   if(n==='analytics') updateStats();
   if(n==='knowledge') populateKnowledgeAgentSelect();
+  if(n==='orders') loadOrders();
   closeSidebar();
 }
+
+  async function loadOrders(){
+  const listDiv = document.getElementById('orders-list');
+  listDiv.innerHTML = '<p style="color:var(--text3);font-size:12px;">লোড হচ্ছে...</p>';
+  try{
+    const res = await fetch('https://kajim-ai-agent-backend.onrender.com/orders/list');
+    const rows = await res.json();
+    if(!Array.isArray(rows) || rows.length===0){
+      listDiv.innerHTML = '<p style="color:var(--text3);font-size:13px;">এখনো কোনো অর্ডার আসেনি।</p>';
+      return;
+    }
+    listDiv.innerHTML = rows.map(o=>{
+      const agent = agents.find(a=>a.id===o.agent_id);
+      const agentName = agent ? agent.name : (o.agent_id || 'অজানা এজেন্ট');
+      const date = new Date(o.created_at).toLocaleString('bn-BD');
+      return `
+        <div class="card" style="margin-bottom:10px;">
+          <div class="card-body" style="gap:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span class="badge badge-purple">${agentName}</span>
+              <span style="font-size:11px;color:var(--text3);">${date}</span>
+            </div>
+            <div style="font-size:13px;"><strong>👤 নাম:</strong> ${o.customer_name || '-'}</div>
+            <div style="font-size:13px;"><strong>📍 ঠিকানা:</strong> ${o.customer_address || '-'}</div>
+            <div style="font-size:13px;"><strong>📞 ফোন:</strong> ${o.customer_phone || '-'}</div>
+            <div style="font-size:13px;"><strong>📦 বিবরণ:</strong> ${o.order_details || '-'}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }catch(err){
+    listDiv.innerHTML = '<p style="color:var(--red);font-size:12px;">লোড করা যায়নি: '+err.message+'</p>';
+  }
+  }
 function renderAgents(){
   const list = document.getElementById('agent-list');
   const sel = document.getElementById('agent-select');
