@@ -367,7 +367,7 @@ input::placeholder,textarea::placeholder{color:var(--text3);}
           <div class="card-body">
             <p style="font-size:13px;color:var(--text2);margin-bottom:4px;">আপনার AI এজেন্টকে সোশ্যাল মিডিয়ায় কানেক্ট করুন:</p>
             <div class="int-grid">
-              <div class="int-card" id="c-fb" onclick="toggleConn('fb')"><span class="int-icon">📘</span><div><div class="int-name">Facebook Page</div><div class="int-status" id="s-fb">কানেক্ট করুন</div></div></div>
+              <div class="int-card" id="c-fb" onclick="connectFacebook()"><span class="int-icon">📘</span><div><div class="int-name">Facebook Page</div><div class="int-status" id="s-fb">কানেক্ট করুন</div></div></div>
               <div class="int-card" id="c-ig" onclick="toggleConn('ig')"><span class="int-icon">📸</span><div><div class="int-name">Instagram</div><div class="int-status" id="s-ig">কানেক্ট করুন</div></div></div>
               <div class="int-card" id="c-wa" onclick="toggleConn('wa')"><span class="int-icon">💬</span><div><div class="int-name">WhatsApp Business</div><div class="int-status" id="s-wa">কানেক্ট করুন</div></div></div>
               <div class="int-card" id="c-tg" onclick="connectTelegram()"><span class="int-icon">✈️</span><div><div class="int-name">Telegram Bot</div><div class="int-status" id="s-tg">কানেক্ট করুন</div></div></div>
@@ -716,7 +716,35 @@ async function connectTelegram(){
     toast('সার্ভার এরর: '+err.message,'error');
   }
 }
+async function connectFacebook(){
+  if(!activeId){ toast('আগে একটা এজেন্ট সিলেক্ট করুন','error'); return; }
+  const agent = agents.find(x => x.id === activeId);
 
+  const pageId = prompt('আপনার Facebook Page ID দিন:');
+  if(!pageId) return;
+
+  const pageAccessToken = prompt('আপনার Page Access Token পেস্ট করুন:');
+  if(!pageAccessToken) return;
+
+  toast('কানেক্ট করা হচ্ছে...','success');
+  try{
+    const res = await fetch('https://kajim-ai-agent-backend.onrender.com/facebook/connect', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ pageId, pageAccessToken, systemPrompt: agent.prompt, agentId: agent.id })
+    });
+    const data = await res.json();
+    if(data.success){
+      document.getElementById('c-fb').classList.add('connected');
+      document.getElementById('s-fb').textContent = '✅ কানেক্টেড: ' + agent.name;
+      toast('✅ Facebook Page কানেক্ট হয়েছে!','success');
+    } else {
+      toast('এরর: '+(data.error||'অজানা সমস্যা'),'error');
+    }
+  }catch(err){
+    toast('সার্ভার এরর: '+err.message,'error');
+  }
+        }
 function addBubble(t,type){
   const a=document.getElementById('chat-area');
   const b=document.createElement('div');
