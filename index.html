@@ -4,80 +4,56 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AgentHub Pro</title>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080810}#agenthub-frame{border:0;width:100%;height:100%;display:block}</style>
 </head>
 <body>
-<div style="font-family:Arial,sans-serif;padding:30px;text-align:center">AgentHub Pro লোড হচ্ছে...</div>
+<iframe id="agenthub-frame" src="./app-core.html"></iframe>
 <script>
-(async function loadAgentHubWithPersistentFacebookState(){
-  const coreUrl = './app-core.html';
-  try {
-    const response = await fetch(coreUrl, { cache: 'no-store' });
-    if (!response.ok) throw new Error('Core app load failed: HTTP ' + response.status);
-    const coreHtml = await response.text();
-
-    const persistencePatch = `<script>
-(function installFacebookPersistence(){
-  const API = 'https://kajim-ai-agent-backend.onrender.com';
-  async function syncFacebookConnectionState(agentId){
-    if(!agentId) return;
+(function(){
+  const frame=document.getElementById('agenthub-frame');
+  const API='https://kajim-ai-agent-backend.onrender.com';
+  async function syncFacebookState(win,agentId){
+    if(!agentId)return;
     try{
-      const res = await fetch(API + '/facebook/list', { cache:'no-store' });
-      if(!res.ok) return;
-      const pages = await res.json();
-      if(!Array.isArray(pages)) return;
-      const connectedPages = pages.filter(p => String(p.agent_id || '') === String(agentId));
-      const card = document.getElementById('c-fb');
-      const status = document.getElementById('s-fb');
-      if(!card || !status) return;
-      if(connectedPages.length){
+      const res=await fetch(API+'/facebook/list',{cache:'no-store'});
+      if(!res.ok)return;
+      const pages=await res.json();
+      if(!Array.isArray(pages))return;
+      const connected=pages.filter(p=>String(p.agent_id||'')===String(agentId));
+      const card=win.document.getElementById('c-fb');
+      const status=win.document.getElementById('s-fb');
+      if(!card||!status)return;
+      if(connected.length){
         card.classList.add('connected');
-        status.textContent = '✅ কানেক্টেড' + (connectedPages.length > 1 ? ': ' + connectedPages.length + ' Pages' : '');
+        status.textContent='✅ কানেক্টেড'+(connected.length>1?': '+connected.length+' Pages':'');
       }else{
         card.classList.remove('connected');
-        status.textContent = 'কানেক্ট করুন';
+        status.textContent='কানেক্ট করুন';
       }
-    }catch(err){
-      console.warn('Facebook connection state sync failed:', err.message);
-    }
+    }catch(err){console.warn('Facebook state sync failed:',err.message)}
   }
-
-  function install(){
-    if(typeof window.selectAgent !== 'function'){
-      setTimeout(install, 50);
-      return;
-    }
-    const originalSelectAgent = window.selectAgent;
-    if(!window.__facebookPersistenceInstalled){
-      window.selectAgent = function(id){
-        const result = originalSelectAgent.apply(this, arguments);
-        syncFacebookConnectionState(id);
+  frame.addEventListener('load',function(){
+    const win=frame.contentWindow;
+    const doc=frame.contentDocument;
+    const originalSelect=win.selectAgent;
+    if(typeof originalSelect==='function'&&!win.__facebookPersistenceInstalled){
+      win.selectAgent=function(id){
+        const result=originalSelect.apply(this,arguments);
+        syncFacebookState(win,id);
+        const share=doc.getElementById('share-link-text');
+        if(share)share.textContent=location.origin+location.pathname+'?agent='+encodeURIComponent(id);
         return result;
       };
-      window.__facebookPersistenceInstalled = true;
+      win.__facebookPersistenceInstalled=true;
     }
-    const runInitialSync = function(){
-      const id = window.activeId;
-      if(id) syncFacebookConnectionState(id);
-    };
-    if(document.readyState === 'complete') runInitialSync();
-    else window.addEventListener('load', runInitialSync, { once:true });
-  }
-
-  install();
-})();
-<\/script>`;
-
-    const patchedHtml = coreHtml.includes('</body>')
-      ? coreHtml.replace('</body>', persistencePatch + '</body>')
-      : coreHtml + persistencePatch;
-
-    document.open();
-    document.write(patchedHtml);
-    document.close();
-  } catch(err){
-    document.body.innerHTML = '<div style="font-family:Arial,sans-serif;padding:30px;color:#b00020">AgentHub Pro লোড করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।</div>';
-    console.error(err);
-  }
+    const aid=new URLSearchParams(location.search).get('agent');
+    if(aid&&win.agents&&win.agents.find(a=>a.id===aid)&&typeof win.selectAgent==='function'){
+      win.selectAgent(aid);
+      if(typeof win.showSection==='function')win.showSection('test');
+    }else if(win.activeId){
+      syncFacebookState(win,win.activeId);
+    }
+  });
 })();
 </script>
 </body>
