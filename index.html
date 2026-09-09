@@ -32,9 +32,17 @@
       }
     }catch(err){console.warn('Facebook state sync failed:',err.message)}
   }
+  function loadAdvancedKB(win,doc){
+    if(doc.getElementById('advanced-kb-script'))return;
+    const script=doc.createElement('script');
+    script.id='advanced-kb-script';
+    script.src='./advanced-kb.js';
+    doc.body.appendChild(script);
+  }
   frame.addEventListener('load',function(){
     const win=frame.contentWindow;
     const doc=frame.contentDocument;
+    loadAdvancedKB(win,doc);
     const originalSelect=win.selectAgent;
     if(typeof originalSelect==='function'&&!win.__facebookPersistenceInstalled){
       win.selectAgent=function(id){
