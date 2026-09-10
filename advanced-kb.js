@@ -15,9 +15,7 @@
     return sel?.value || window.activeId || '';
   }
 
-  function section() {
-    return document.getElementById('section-knowledge');
-  }
+  function section() { return document.getElementById('section-knowledge'); }
 
   function toastMsg(message, type) {
     if (typeof window.toast === 'function') window.toast(message, type);
@@ -48,6 +46,22 @@
 
       <div class="card">
         <div class="card-header">
+          <div class="card-title">🌐 Website থেকে Knowledge Import</div>
+          <span class="badge badge-blue">HTML / TXT</span>
+        </div>
+        <div class="card-body">
+          <div class="field">
+            <label>Website / Public URL</label>
+            <input id="kb-import-url" type="url" maxlength="2000" placeholder="https://example.com/about">
+            <div class="helper">Public website-এর তথ্য এনে এই Agent-এর Knowledge Base-এ সংরক্ষণ করবে। Private/local URL নেওয়া হবে না।</div>
+          </div>
+          <button class="btn btn-primary" id="kb-import-btn" onclick="window.importKnowledgeFromUrl()">🌐 Import Website</button>
+          <div id="kb-import-status" class="helper"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
           <div class="card-title">➕ নতুন Knowledge যোগ করুন</div>
           <span id="kb-form-mode" class="badge badge-green">নতুন তথ্য</span>
         </div>
@@ -58,7 +72,7 @@
           </div>
           <div class="field">
             <label>FAQ Question (ঐচ্ছিক)</label>
-            <input id="kb-question" maxlength="2000" placeholder="যেমন: ৮ শিকের ছাতার দাম কত?"></textarea>
+            <input id="kb-question" maxlength="2000" placeholder="যেমন: ৮ শিকের ছাতার দাম কত?">
           </div>
           <div class="field">
             <label>Answer / মূল তথ্য *</label>
@@ -72,7 +86,7 @@
             <button class="btn btn-primary" id="kb-save-btn" onclick="window.saveAdvancedKnowledge()">💾 সেভ করুন</button>
             <button class="btn btn-ghost" id="kb-cancel-btn" onclick="window.cancelAdvancedKnowledge()" style="display:none">বাতিল</button>
           </div>
-          <div class="helper">পুরোনো Knowledge-গুলোও থাকবে। এই নতুন ফর্মটি সেই একই agent_knowledge সিস্টেমে তথ্য সংরক্ষণ করে।</div>
+          <div class="helper">পুরোনো Knowledge-গুলোও থাকবে। এই নতুন ফর্মটি একই agent_knowledge সিস্টেমে তথ্য সংরক্ষণ করে।</div>
         </div>
       </div>
 
@@ -158,6 +172,38 @@
       </div>`).join('');
   }
 
+  window.importKnowledgeFromUrl = async function () {
+    const aid = agentId();
+    const input = document.getElementById('kb-import-url');
+    const btn = document.getElementById('kb-import-btn');
+    const status = document.getElementById('kb-import-status');
+    const sourceUrl = input?.value.trim();
+    if (!aid) return toastMsg('আগে একটি এজেন্ট নির্বাচন করুন', 'error');
+    if (!sourceUrl) return toastMsg('Website URL দিন', 'error');
+    if (!/^https?:\/\//i.test(sourceUrl)) return toastMsg('http:// বা https:// URL দিন', 'error');
+    btn.disabled = true;
+    btn.textContent = '⏳ Import হচ্ছে...';
+    status.textContent = 'Website থেকে তথ্য আনা হচ্ছে...';
+    try {
+      const res = await fetch(`${API}/knowledge/advanced/import-url`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ agentId: aid, sourceUrl })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Import করা যায়নি');
+      toastMsg(`✅ Website import হয়েছে (${data.characters || 0} characters)`, 'success');
+      status.textContent = '✅ Import সম্পন্ন';
+      input.value = '';
+      await loadAdvancedKnowledge();
+    } catch (err) {
+      status.textContent = '';
+      toastMsg('Import error: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🌐 Import Website';
+    }
+  };
+
   window.saveAdvancedKnowledge = async function () {
     const id = agentId();
     const answer = document.getElementById('kb-answer')?.value.trim();
@@ -232,6 +278,5 @@
     }
   }
 
-  // app-core is already loaded when this script is injected by index.html.
   install();
 })();
