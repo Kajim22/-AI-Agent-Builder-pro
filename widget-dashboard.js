@@ -4,10 +4,44 @@
   let mounted=false;
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 
+  // app-core uses top-level `let agents`, which is not exposed as window.agents.
+  // Read the same browser storage directly so the widget selector sees all agents.
+  function getAgents(){
+    try{
+      const rows=JSON.parse(localStorage.getItem('ah_agents')||'[]');
+      return Array.isArray(rows)?rows:[];
+    }catch(e){ return []; }
+  }
+
+  function getActiveId(){
+    const coreSelect=document.getElementById('agent-select');
+    return coreSelect?.value||'';
+  }
+
+  function syncAgentOptions(){
+    const sel=document.getElementById('widget-agent-select');
+    if(!sel)return;
+    const list=getAgents();
+    const current=sel.value||getActiveId();
+    const signature=list.map(a=>String(a.id)+':'+String(a.name||'')).join('|');
+    if(sel.dataset.signature!==signature){
+      sel.innerHTML='<option value="">— এজেন্ট বেছে নিন —</option>';
+      list.forEach(a=>{
+        const o=document.createElement('option');
+        o.value=a.id;
+        o.textContent=a.name||a.id;
+        sel.appendChild(o);
+      });
+      sel.dataset.signature=signature;
+    }
+    if(current && list.some(a=>String(a.id)===String(current))) sel.value=current;
+    render();
+  }
+
   function mount(){
     if(mounted || document.getElementById('nav-website-widget')) return true;
     const nav=document.querySelector('.sidebar-nav'),main=document.querySelector('.content');
-    if(!nav||!main) return false;
+    if(!nav||!main)return false;
     mounted=true;
 
     const item=document.createElement('div');
@@ -35,12 +69,14 @@
     main.appendChild(section);
 
     const sel=section.querySelector('#widget-agent-select');
-    (window.agents||[]).forEach(a=>{const o=document.createElement('option');o.value=a.id;o.textContent=a.name||a.id;sel.appendChild(o);});
-    if(window.activeId) sel.value=window.activeId;
-    sel.addEventListener('change',render);
+    sel.addEventListener('change',function(){
+      render();
+      const core=document.getElementById('agent-select');
+      if(core && core.value!==sel.value && typeof window.selectAgent==='function') window.selectAgent(sel.value);
+    });
     section.querySelector('#widget-copy-btn').addEventListener('click',copyCode);
     section.querySelector('#widget-open-btn').addEventListener('click',openWidget);
-    render();
+    syncAgentOptions();
     return true;
   }
 
@@ -49,38 +85,58 @@
     const src=base+'widget.js';
     return `<script src="${src}" data-agent-id="${esc(id)}"></script>`;
   }
+
   function render(){
     const sel=document.getElementById('widget-agent-select'),box=document.getElementById('widget-preview-box'),code=document.getElementById('widget-embed-code'),status=document.getElementById('widget-status');
     if(!sel||!code)return;
-    const id=sel.value||window.activeId||'';
+    const id=sel.value||getActiveId()||'';
+    if(id && sel.value!==id)sel.value=id;
     if(!id){box.style.display='none';status.textContent='প্রথমে একটি Agent তৈরি/নির্বাচন করুন।';return;}
     const c=codeFor(id);box.style.display='flex';code.value=c;status.textContent='এই code-টি website-এর </body> এর ঠিক আগে বসাতে পারেন।';
   }
+
   async function copyCode(){
     const code=document.getElementById('widget-embed-code')?.value;if(!code)return;
     try{await navigator.clipboard.writeText(code);if(typeof window.toast==='function')window.toast('✅ Embed Code কপি হয়েছে','success');}
     catch(e){const el=document.getElementById('widget-embed-code');el.select();document.execCommand('copy');if(typeof window.toast==='function')window.toast('✅ Embed Code কপি হয়েছে','success');}
   }
+
   function openWidget(){
     const id=document.getElementById('widget-agent-select')?.value;if(!id)return;
     const base=location.origin+location.pathname.replace(/\/[^/]*$/,'/');
     window.open(base+'widget.html?agent='+encodeURIComponent(id),'_blank');
   }
+
   function show(){
     if(!mount())return;
-    const oldShow=window.__widgetOldShow;
-    if(typeof oldShow==='function') oldShow('website-widget');
-    else document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-    document.getElementById('section-website-widget')?.classList.add('active');
+    syncAgentOptions();
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+    document.getElementById('section-website-widget')?.classList.add('active');
     document.getElementById('nav-website-widget')?.classList.add('active');
     render();
   }
 
-  const timer=setInterval(()=>{if(mount())clearInterval(timer);},200);
-  const oldShow=window.showSection;
-  window.__widgetOldShow=oldShow;
-  window.showSection=function(n){if(n==='website-widget'){show();return;}return oldShow?.apply(this,arguments);};
+  // Wait for the iframe UI, then keep the selector synchronized with Agent Builder.
+  const timer=setInterval(()=>{
+    if(mount())syncAgentOptions();
+    if(mounted && document.getElementById('agent-select'))syncAgentOptions();
+  },500);
+
+  // Preserve the existing Agent Builder selection behavior and mirror it here.
   const oldSelect=window.selectAgent;
-  if(typeof oldSelect==='function') window.selectAgent=function(id){const r=oldSelect.apply(this,arguments);setTimeout(()=>{const s=document.getElementById('widget-agent-select');if(s){s.value=id;render();}},0);return r;};
+  if(typeof oldSelect==='function'){
+    window.selectAgent=function(id){
+      const r=oldSelect.apply(this,arguments);
+      setTimeout(()=>{syncAgentOptions();const s=document.getElementById('widget-agent-select');if(s){s.value=id;render();}},0);
+      return r;
+    };
+  }
+
+  // Preserve the original showSection for every existing section.
+  const oldShow=window.showSection;
+  window.showSection=function(n){
+    if(n==='website-widget'){show();return;}
+    return oldShow?.apply(this,arguments);
+  };
 })();
