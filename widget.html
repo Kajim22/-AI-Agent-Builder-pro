@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AKEXA Website Chat Widget</title>
+<style>html,body{margin:0;min-height:100%;background:transparent}#widget-error{font-family:Arial,sans-serif;padding:20px;color:#333}</style>
+</head>
+<body>
+<div id="widget-error"></div>
+<script>
+(function(){
+  const id=new URLSearchParams(location.search).get('agent');
+  const error=document.getElementById('widget-error');
+  if(!id){error.textContent='Agent ID পাওয়া যায়নি।';return;}
+  const s=document.createElement('script');
+  s.src='./widget.js';
+  s.dataset.agentId=id;
+  document.body.appendChild(s);
+})();
+</script>
+</body>
+</html>
