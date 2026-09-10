@@ -12,55 +12,18 @@
 (function(){
   const frame=document.getElementById('agenthub-frame');
   const API='https://kajim-ai-agent-backend.onrender.com';
+  function loadScript(win,doc,id,src){if(doc.getElementById(id))return;const s=doc.createElement('script');s.id=id;s.src=src;doc.body.appendChild(s);}
   async function syncFacebookState(win,agentId){
     if(!agentId)return;
-    try{
-      const res=await fetch(API+'/facebook/list',{cache:'no-store'});
-      if(!res.ok)return;
-      const pages=await res.json();
-      if(!Array.isArray(pages))return;
-      const connected=pages.filter(p=>String(p.agent_id||'')===String(agentId));
-      const card=win.document.getElementById('c-fb');
-      const status=win.document.getElementById('s-fb');
-      if(!card||!status)return;
-      if(connected.length){
-        card.classList.add('connected');
-        status.textContent='✅ কানেক্টেড'+(connected.length>1?': '+connected.length+' Pages':'');
-      }else{
-        card.classList.remove('connected');
-        status.textContent='কানেক্ট করুন';
-      }
-    }catch(err){console.warn('Facebook state sync failed:',err.message)}
-  }
-  function loadAdvancedKB(win,doc){
-    if(doc.getElementById('advanced-kb-script'))return;
-    const script=doc.createElement('script');
-    script.id='advanced-kb-script';
-    script.src='./advanced-kb.js';
-    doc.body.appendChild(script);
-  }
+    try{const res=await fetch(API+'/facebook/list',{cache:'no-store'});if(!res.ok)return;const pages=await res.json();if(!Array.isArray(pages))return;const connected=pages.filter(p=>String(p.agent_id||'')===String(agentId));const card=win.document.getElementById('c-fb');const status=win.document.getElementById('s-fb');if(!card||!status)return;if(connected.length){card.classList.add('connected');status.textContent='✅ কানেক্টেড'+(connected.length>1?': '+connected.length+' Pages':'');}else{card.classList.remove('connected');status.textContent='কানেক্ট করুন';}}catch(err){console.warn('Facebook state sync failed:',err.message)}}
   frame.addEventListener('load',function(){
-    const win=frame.contentWindow;
-    const doc=frame.contentDocument;
-    loadAdvancedKB(win,doc);
+    const win=frame.contentWindow,doc=frame.contentDocument;
+    loadScript(win,doc,'advanced-kb-script','./advanced-kb.js');
+    loadScript(win,doc,'customer-dashboard-script','./customer-dashboard.js');
     const originalSelect=win.selectAgent;
-    if(typeof originalSelect==='function'&&!win.__facebookPersistenceInstalled){
-      win.selectAgent=function(id){
-        const result=originalSelect.apply(this,arguments);
-        syncFacebookState(win,id);
-        const share=doc.getElementById('share-link-text');
-        if(share)share.textContent=location.origin+location.pathname+'?agent='+encodeURIComponent(id);
-        return result;
-      };
-      win.__facebookPersistenceInstalled=true;
-    }
+    if(typeof originalSelect==='function'&&!win.__facebookPersistenceInstalled){win.selectAgent=function(id){const result=originalSelect.apply(this,arguments);syncFacebookState(win,id);const share=doc.getElementById('share-link-text');if(share)share.textContent=location.origin+location.pathname+'?agent='+encodeURIComponent(id);return result;};win.__facebookPersistenceInstalled=true;}
     const aid=new URLSearchParams(location.search).get('agent');
-    if(aid&&win.agents&&win.agents.find(a=>a.id===aid)&&typeof win.selectAgent==='function'){
-      win.selectAgent(aid);
-      if(typeof win.showSection==='function')win.showSection('test');
-    }else if(win.activeId){
-      syncFacebookState(win,win.activeId);
-    }
+    if(aid&&win.agents&&win.agents.find(a=>a.id===aid)&&typeof win.selectAgent==='function'){win.selectAgent(aid);if(typeof win.showSection==='function')win.showSection('test');}else if(win.activeId)syncFacebookState(win,win.activeId);
   });
 })();
 </script>
