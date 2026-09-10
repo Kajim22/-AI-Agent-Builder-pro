@@ -5,6 +5,8 @@
   let orders=[];
   const statuses=['new','confirmed','processing','delivered','cancelled'];
   const labels={new:'New',confirmed:'Confirmed',processing:'Processing',delivered:'Delivered',cancelled:'Cancelled'};
+  const lastSeen={};
+  const primed={};
 
   // app-core keeps `agents` as a top-level `let`, so it is not available as window.agents.
   // Read the same localStorage source used by Agent Builder.
@@ -39,6 +41,46 @@
     if(current && list.some(a=>String(a.id)===String(current))) sel.value=current;
   }
 
+  function showOrderToast(order){
+    let box=document.getElementById('order-notification-toast');
+    if(!box){
+      box=document.createElement('div');
+      box.id='order-notification-toast';
+      box.style.cssText='position:fixed;right:18px;top:18px;z-index:9999;width:min(360px,calc(100vw - 36px));background:var(--surface,#111);border:1px solid var(--green,#10b981);border-radius:12px;padding:14px;box-shadow:0 12px 35px rgba(0,0,0,.45);color:var(--text,#fff);font-size:12px;line-height:1.55;';
+      document.body.appendChild(box);
+    }
+    box.innerHTML=`<div style="font-weight:800;font-size:13px;margin-bottom:5px">🔔 নতুন অর্ডার এসেছে!</div><div>#${esc(order.id)} · ${esc(order.customerName||'নাম নেই')}</div><div>${esc(order.customerPhone||'ফোন নেই')}</div><div style="margin-top:3px">${esc(order.orderDetails||'Order details নেই')}</div>`;
+    clearTimeout(box._timer);
+    box._timer=setTimeout(()=>box.remove(),7000);
+  }
+
+  async function pollNewOrders(){
+    const aid=document.getElementById('orders-agent-select')?.value||getActiveId()||'';
+    if(!aid)return;
+    try{
+      if(!primed[aid]){
+        const r=await fetch(`${API}/orders/dashboard/${encodeURIComponent(aid)}`,{cache:'no-store'});
+        const d=await r.json();
+        const rows=d?.orders||[];
+        lastSeen[aid]=rows.reduce((m,o)=>Math.max(m,Number(o.id)||0),0);
+        primed[aid]=true;
+        return;
+      }
+      const since=Number(lastSeen[aid]||0);
+      const r=await fetch(`${API}/orders/notifications/${encodeURIComponent(aid)}?sinceId=${since}`,{cache:'no-store'});
+      const d=await r.json();
+      if(!d?.success||!Array.isArray(d.orders))return;
+      for(const order of d.orders){
+        const id=Number(order.id)||0;
+        if(id>since) lastSeen[aid]=Math.max(Number(lastSeen[aid]||0),id);
+        showOrderToast(order);
+      }
+      if(d.orders.length) load();
+    }catch(e){
+      // Notification polling is intentionally non-blocking; the main dashboard still works.
+    }
+  }
+
   function mount(){
     if(document.getElementById('nav-orders-smart')){syncAgentOptions();return true;}
     const nav=document.querySelector('.sidebar-nav'),main=document.querySelector('.content');
@@ -52,6 +94,7 @@
     sel.addEventListener('change',function(){
       const id=sel.value;
       if(id && typeof window.selectAgent==='function') window.selectAgent(id);
+      primed[id]=false;
       load();
     });
     document.getElementById('order-search').addEventListener('input',render);
@@ -71,6 +114,8 @@
       const d=await r.json();
       if(!d.success)throw Error(d.error||'লোড করা যায়নি');
       orders=d.orders||[];
+      if(lastSeen[aid]===undefined) lastSeen[aid]=orders.reduce((m,o)=>Math.max(m,Number(o.id)||0),0);
+      primed[aid]=true;
       renderSummary(d.summary||{});
       render();
     }catch(e){list.innerHTML=`<p style="color:var(--red);font-size:12px">লোড করা যায়নি: ${esc(e.message)}</p>`;}
@@ -122,11 +167,11 @@
   if(typeof oldSelect==='function'){
     window.selectAgent=function(id){
       const r=oldSelect.apply(this,arguments);
-      setTimeout(()=>{syncAgentOptions();const s=document.getElementById('orders-agent-select');if(s){s.value=id;load();}},0);
+      setTimeout(()=>{syncAgentOptions();const s=document.getElementById('orders-agent-select');if(s){s.value=id;primed[id]=false;load();}},0);
       return r;
     };
   }
 
-  // Keep checking because Agent Builder may load/populate agents after this script starts.
-  const timer=setInterval(()=>{if(mount())syncAgentOptions();},500);
+  const timer=setInterval(()=>{if(mount())syncAgentOptions();pollNewOrders();},5000);
+  setTimeout(pollNewOrders,1500);
 })();
