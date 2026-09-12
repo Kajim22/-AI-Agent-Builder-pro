@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AKEXA AI Factory</title>
+<title>AKEXA AI Bazar</title>
 <style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080810}#agenthub-frame{border:0;width:100%;height:100%;display:block}</style>
 </head>
 <body>
@@ -12,12 +12,21 @@
 (function(){
   const frame=document.getElementById('agenthub-frame');
   const API='https://kajim-ai-agent-backend.onrender.com';
+  function applyBranding(doc){
+    if(!doc)return;
+    if(doc.title) doc.title='AKEXA AI Bazar';
+    const logo=doc.querySelector('.logo-name');
+    if(logo) logo.textContent='AKEXA AI Bazar';
+    const tag=doc.querySelector('.logo-tag');
+    if(tag) tag.textContent='Build AI Agents. Automate Businesses.';
+  }
   function loadScript(win,doc,id,src){if(doc.getElementById(id))return;const s=doc.createElement('script');s.id=id;s.src=src;doc.body.appendChild(s);}
   async function syncFacebookState(win,agentId){
     if(!agentId)return;
     try{const res=await fetch(API+'/facebook/list',{cache:'no-store'});if(!res.ok)return;const pages=await res.json();if(!Array.isArray(pages))return;const connected=pages.filter(p=>String(p.agent_id||'')===String(agentId));const card=win.document.getElementById('c-fb');const status=win.document.getElementById('s-fb');if(!card||!status)return;if(connected.length){card.classList.add('connected');status.textContent='✅ কানেক্টেড'+(connected.length>1?': '+connected.length+' Pages':'');}else{card.classList.remove('connected');status.textContent='কানেক্ট করুন';}}catch(err){console.warn('Facebook state sync failed:',err.message)}}
   frame.addEventListener('load',function(){
     const win=frame.contentWindow,doc=frame.contentDocument;
+    applyBranding(doc);
     loadScript(win,doc,'advanced-kb-script','./advanced-kb.js');
     loadScript(win,doc,'customer-dashboard-script','./customer-dashboard.js');
     loadScript(win,doc,'smart-orders-script','./smart-orders.js');
