@@ -63,6 +63,26 @@
     doc.getElementById('akexa-back-bazar').onclick=()=>{overlay.remove();render(win,doc);};
     doc.getElementById('akexa-buy-btn').onclick=()=>subscribe(x.id,win,doc);
   }
-  function boot(){const frame=document.querySelector('#agenthub-frame');if(!frame)return;frame.addEventListener('load',async function(){const win=frame.contentWindow,doc=frame.contentDocument;if(!doc)return;injectStyles(doc);await loadSupabase(doc);if(!doc.getElementById('akexa-bazar-nav')){const item=doc.createElement('div');item.id='akexa-bazar-nav';item.className='nav-item';item.innerHTML='<span class="nav-icon">🛒</span><span>AI Bazar</span>';item.onclick=()=>render(win,doc);const navWrap=doc.querySelector('.sidebar-nav');if(navWrap)navWrap.appendChild(item);}win.akexaBazarPublish=id=>publish(id,win,doc);win.akexaBazarBuy=id=>subscribe(id,win,doc);win.akexaBazarDetails=id=>details(id,win,doc);});}
+  function mount(win,doc){
+    if(!doc)return false;
+    currentWin=win;currentDoc=doc;injectStyles(doc);
+    const navWrap=doc.querySelector('.sidebar-nav');
+    if(navWrap&&!doc.getElementById('akexa-bazar-nav')){
+      const group=doc.createElement('div');group.className='nav-group-label';group.textContent='MARKETPLACE';
+      const item=doc.createElement('div');item.id='akexa-bazar-nav';item.className='nav-item';item.innerHTML='<span class="nav-icon">🛒</span><span>AI Bazar</span>';item.onclick=()=>render(win,doc);
+      navWrap.append(group,item);
+    }
+    win.akexaBazarOpen=()=>render(win,doc);
+    win.akexaBazarPublish=id=>publish(id,win,doc);
+    win.akexaBazarBuy=id=>subscribe(id,win,doc);
+    win.akexaBazarDetails=id=>details(id,win,doc);
+    return !!doc.getElementById('akexa-bazar-nav');
+  }
+  function boot(){
+    // This script is loaded INSIDE app-core.html. Do not look for the parent iframe here.
+    const doc=document,win=window;
+    if(mount(win,doc))return;
+    let tries=0;const timer=setInterval(()=>{tries++;if(mount(win,doc)||tries>=30)clearInterval(timer);},300);
+  }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
