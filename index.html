@@ -32,6 +32,7 @@
     loadScript(win,doc,'smart-orders-script','./smart-orders.js');
     loadScript(win,doc,'website-widget-dashboard-script','./widget-dashboard.js');
     loadScript(win,doc,'akexa-bazar-script','./marketplace.js');
+    loadScript(win,doc,'akexa-sub-dashboard-script','./marketplace-dashboard.js');
     const originalSelect=win.selectAgent;
     if(typeof originalSelect==='function'&&!win.__facebookPersistenceInstalled){win.selectAgent=function(id){const result=originalSelect.apply(this,arguments);syncFacebookState(win,id);const share=doc.getElementById('share-link-text');if(share)share.textContent=location.origin+location.pathname+'?agent='+encodeURIComponent(id);return result;};win.__facebookPersistenceInstalled=true;}
     const aid=new URLSearchParams(location.search).get('agent');
