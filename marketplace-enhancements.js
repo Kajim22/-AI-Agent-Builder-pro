@@ -1,9 +1,10 @@
-/* AKEXA AI Bazar — launcher compatibility fix. */
+/* AKEXA AI Bazar — launcher and catalog compatibility layer. */
 (function () {
   'use strict';
   const root = window;
   const doc = document;
   let loading = null;
+  let catalogLoading = null;
 
   function openMarketplaceNow() {
     const opener = root.openMarketplace || root.akexaBazarOpen;
@@ -12,6 +13,20 @@
       return true;
     }
     return false;
+  }
+
+  function loadCatalog() {
+    if (doc.getElementById('akexa-marketplace-catalog')) return Promise.resolve(true);
+    if (catalogLoading) return catalogLoading;
+    catalogLoading = new Promise(resolve => {
+      const script = doc.createElement('script');
+      script.id = 'akexa-marketplace-catalog';
+      script.src = '/marketplace-catalog.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      doc.head.appendChild(script);
+    });
+    return catalogLoading;
   }
 
   function showFallback(message) {
@@ -49,12 +64,18 @@
   }
 
   async function open() {
-    if (openMarketplaceNow()) return true;
+    if (openMarketplaceNow()) {
+      loadCatalog();
+      return true;
+    }
     showFallback('Loading the marketplace module…');
     const ready = await loadMarketplace();
     const box = doc.getElementById('akexa-bazar-fallback');
     if (box) box.remove();
-    if (ready && openMarketplaceNow()) return true;
+    if (ready && openMarketplaceNow()) {
+      loadCatalog();
+      return true;
+    }
     showFallback('The marketplace module could not be loaded. Please try again.');
     return false;
   }
