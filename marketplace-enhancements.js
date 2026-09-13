@@ -1,4 +1,4 @@
-/* AKEXA AI Bazar — launcher and module loading fix. */
+/* AKEXA AI Bazar — robust launcher and absolute module loading fix. */
 (function () {
   'use strict';
 
@@ -28,6 +28,7 @@
     doc.getElementById('akexa-bazar-fallback-close').onclick = () => overlay.remove();
     doc.getElementById('akexa-bazar-fallback-retry').onclick = () => {
       overlay.remove();
+      loading = null;
       open();
     };
     if (message) overlay.querySelector('[data-bazar-note]').textContent = message;
@@ -42,13 +43,13 @@
       if (existing) {
         existing.addEventListener('load', () => resolve(typeof root.openMarketplace === 'function'));
         existing.addEventListener('error', () => resolve(false));
-        setTimeout(() => resolve(typeof root.openMarketplace === 'function'), 1500);
+        setTimeout(() => resolve(typeof root.openMarketplace === 'function'), 2000);
         return;
       }
 
       const script = doc.createElement('script');
       script.id = 'akexa-bazar-script';
-      script.src = new URL('./marketplace.js', doc.baseURI).href;
+      script.src = '/marketplace.js';
       script.onload = () => resolve(typeof root.openMarketplace === 'function');
       script.onerror = () => resolve(false);
       doc.head.appendChild(script);
