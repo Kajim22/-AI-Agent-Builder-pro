@@ -4,6 +4,7 @@
   const root = window;
   const doc = document;
   let loading = null;
+  let publishWrapped = false;
 
   function openMarketplaceNow() {
     const opener = root.openMarketplace || root.akexaBazarOpen;
@@ -59,6 +60,23 @@
     return false;
   }
 
+  function patchPublish() {
+    if (publishWrapped || typeof root.akexaBazarPublish !== 'function') return;
+    const originalPublish = root.akexaBazarPublish;
+    root.akexaBazarPublish = async function (id) {
+      try {
+        return await originalPublish.call(root, id);
+      } catch (error) {
+        console.error('AKEXA AI Bazar publish error:', error);
+        const message = error && error.message ? error.message : String(error);
+        alert('Publish failed: ' + message);
+        return false;
+      }
+    };
+    root.akexaBazarPublish.__akexaWrapped = true;
+    publishWrapped = true;
+  }
+
   function patch() {
     const item = doc.getElementById('akexa-bazar-nav');
     if (item) {
@@ -68,19 +86,14 @@
     if (browse) {
       browse.onclick = event => { event?.preventDefault(); event?.stopPropagation(); open(); return false; };
     }
-  }
-
-  function loadCatalog() {
-    if (doc.getElementById('akexa-catalog-script')) return;
-    const script = doc.createElement('script');
-    script.id = 'akexa-catalog-script';
-    script.src = '/marketplace-catalog.js';
-    script.async = true;
-    doc.head.appendChild(script);
+    patchPublish();
   }
 
   patch();
-  loadCatalog();
   let tries = 0;
-  const timer = setInterval(() => { patch(); loadCatalog(); tries += 1; if (tries >= 80 || typeof root.akexaBazarOpen === 'function') clearInterval(timer); }, 250);
+  const timer = setInterval(() => {
+    patch();
+    tries += 1;
+    if (tries >= 80 || (typeof root.akexaBazarOpen === 'function' && publishWrapped)) clearInterval(timer);
+  }, 250);
 })();
