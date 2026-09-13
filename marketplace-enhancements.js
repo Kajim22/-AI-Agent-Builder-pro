@@ -1,4 +1,4 @@
-/* AKEXA AI Bazar — launcher compatibility fix. */
+/* AKEXA AI Bazar — launcher and publish-flow compatibility fix. */
 (function () {
   'use strict';
   const root = window;
@@ -85,6 +85,15 @@
     const browse = doc.getElementById('akexa-browse-btn');
     if (browse) {
       browse.onclick = event => { event?.preventDefault(); event?.stopPropagation(); open(); return false; };
+    }
+    const sell = doc.getElementById('akexa-sell-btn');
+    if (sell) {
+      sell.onclick = event => {
+        event?.preventDefault();
+        event?.stopPropagation();
+        open();
+        return false;
+      };
     }
     patchPublish();
   }
