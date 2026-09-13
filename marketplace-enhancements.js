@@ -1,10 +1,9 @@
-/* AKEXA AI Bazar — launcher and catalog compatibility layer. */
+/* AKEXA AI Bazar — launcher compatibility fix. */
 (function () {
   'use strict';
   const root = window;
   const doc = document;
   let loading = null;
-  let catalogLoading = null;
 
   function openMarketplaceNow() {
     const opener = root.openMarketplace || root.akexaBazarOpen;
@@ -13,20 +12,6 @@
       return true;
     }
     return false;
-  }
-
-  function loadCatalog() {
-    if (doc.getElementById('akexa-marketplace-catalog')) return Promise.resolve(true);
-    if (catalogLoading) return catalogLoading;
-    catalogLoading = new Promise(resolve => {
-      const script = doc.createElement('script');
-      script.id = 'akexa-marketplace-catalog';
-      script.src = '/marketplace-catalog.js';
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      doc.head.appendChild(script);
-    });
-    return catalogLoading;
   }
 
   function showFallback(message) {
@@ -64,18 +49,12 @@
   }
 
   async function open() {
-    if (openMarketplaceNow()) {
-      loadCatalog();
-      return true;
-    }
+    if (openMarketplaceNow()) return true;
     showFallback('Loading the marketplace module…');
     const ready = await loadMarketplace();
     const box = doc.getElementById('akexa-bazar-fallback');
     if (box) box.remove();
-    if (ready && openMarketplaceNow()) {
-      loadCatalog();
-      return true;
-    }
+    if (ready && openMarketplaceNow()) return true;
     showFallback('The marketplace module could not be loaded. Please try again.');
     return false;
   }
@@ -91,7 +70,17 @@
     }
   }
 
+  function loadCatalog() {
+    if (doc.getElementById('akexa-catalog-script')) return;
+    const script = doc.createElement('script');
+    script.id = 'akexa-catalog-script';
+    script.src = '/marketplace-catalog.js';
+    script.async = true;
+    doc.head.appendChild(script);
+  }
+
   patch();
+  loadCatalog();
   let tries = 0;
-  const timer = setInterval(() => { patch(); tries += 1; if (tries >= 80 || typeof root.akexaBazarOpen === 'function') clearInterval(timer); }, 250);
+  const timer = setInterval(() => { patch(); loadCatalog(); tries += 1; if (tries >= 80 || typeof root.akexaBazarOpen === 'function') clearInterval(timer); }, 250);
 })();
