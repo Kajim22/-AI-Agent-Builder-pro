@@ -77,6 +77,35 @@
     publishWrapped = true;
   }
 
+  function patchMarketplaceActions() {
+    const myAgents = doc.getElementById('akexa-myagents');
+    if (myAgents && !myAgents.dataset.akexaPatched) {
+      myAgents.dataset.akexaPatched = '1';
+      myAgents.textContent = 'My Agents';
+      myAgents.onclick = event => {
+        event?.preventDefault();
+        event?.stopPropagation();
+        doc.getElementById('akexa-bazar-overlay')?.remove();
+        if (typeof root.showSection === 'function') root.showSection('build');
+      };
+    }
+
+    const toolbar = doc.querySelector('#akexa-bazar-overlay .akexa-bazar-toolbar');
+    if (toolbar && !doc.getElementById('akexa-create-agent-from-bazar')) {
+      const create = doc.createElement('button');
+      create.id = 'akexa-create-agent-from-bazar';
+      create.className = 'btn btn-ghost btn-sm';
+      create.textContent = '＋ Create Agent';
+      create.onclick = event => {
+        event?.preventDefault();
+        event?.stopPropagation();
+        doc.getElementById('akexa-bazar-overlay')?.remove();
+        if (typeof root.showSection === 'function') root.showSection('build');
+      };
+      toolbar.appendChild(create);
+    }
+  }
+
   function patch() {
     const item = doc.getElementById('akexa-bazar-nav');
     if (item) {
@@ -95,6 +124,7 @@
         return false;
       };
     }
+    patchMarketplaceActions();
     patchPublish();
   }
 
