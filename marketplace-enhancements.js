@@ -1,8 +1,10 @@
-/* AKEXA AI Bazar — launcher and publish-flow compatibility fix. */
+/* AKEXA AI Bazar — launcher, publish-flow, storage and auth compatibility fix. */
 (function () {
   'use strict';
   const root = window;
   const doc = document;
+  const SUPABASE_URL = 'https://yhspipyrgdcdfqqxxges.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_IcyDHTLjyPPspvcgnYZZiw_q1lUn8QW';
   let loading = null;
   let publishWrapped = false;
 
@@ -50,12 +52,66 @@
     showFallback('The marketplace module could not be loaded. Please try again.'); return false;
   }
 
+  function syncAgentStorage() {
+    try {
+      const primary = JSON.parse(root.localStorage.getItem('ah_agents') || '[]');
+      const legacy = JSON.parse(root.localStorage.getItem('agents') || '[]');
+      if (Array.isArray(primary) && primary.length && (!Array.isArray(legacy) || legacy.length !== primary.length)) {
+        const normalized = primary.map(agent => ({
+          ...agent,
+          system_prompt: agent.system_prompt || agent.prompt || '',
+          description: agent.description || '',
+          category: agent.category || 'Business',
+          monthly_price: agent.monthly_price ?? 0
+        }));
+        root.localStorage.setItem('agents', JSON.stringify(normalized));
+      }
+    } catch (_) {}
+  }
+
+  function showPublishAuth(afterLogin) {
+    const old = doc.getElementById('akexa-publish-auth-overlay');
+    if (old) old.remove();
+    const overlay = doc.createElement('div');
+    overlay.id = 'akexa-publish-auth-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(3,3,9,.86);display:flex;align-items:center;justify-content:center;padding:18px;';
+    overlay.innerHTML = '<div style="width:min(420px,100%);background:#151525;border:1px solid #393955;border-radius:16px;padding:22px;color:#fff;font-family:Arial,sans-serif"><h2 style="margin:0 0 8px;color:#c4b5fd">Login to AKEXA AI Bazar</h2><p style="color:#b8b8d0;font-size:13px">Publish করতে আগে Login অথবা Create account করুন।</p><input id="akexa-publish-email" type="email" placeholder="Email" style="width:100%;box-sizing:border-box;margin:7px 0;padding:11px;background:#0d0d16;border:1px solid #454565;color:#fff;border-radius:8px"><input id="akexa-publish-password" type="password" placeholder="Password" style="width:100%;box-sizing:border-box;margin:7px 0;padding:11px;background:#0d0d16;border:1px solid #454565;color:#fff;border-radius:8px"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button id="akexa-publish-login" style="background:#7c3aed;color:#fff;border:0;border-radius:8px;padding:10px 14px;font-weight:700">Login</button><button id="akexa-publish-signup" style="background:#292945;color:#fff;border:1px solid #454565;border-radius:8px;padding:10px 14px;font-weight:700">Create account</button><button id="akexa-publish-cancel" style="background:transparent;color:#c9c9df;border:1px solid #454565;border-radius:8px;padding:10px 14px">Cancel</button></div><div id="akexa-publish-auth-msg" style="font-size:12px;margin-top:12px;color:#b8b8d0"></div></div>';
+    doc.body.appendChild(overlay);
+    const msg = doc.getElementById('akexa-publish-auth-msg');
+    const credentials = () => ({ email: doc.getElementById('akexa-publish-email').value.trim(), password: doc.getElementById('akexa-publish-password').value });
+    const getClient = () => {
+      if (root.supabase?.createClient) return root.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      throw new Error('Supabase SDK এখনও লোড হয়নি। Bazar আবার খুলুন।');
+    };
+    doc.getElementById('akexa-publish-cancel').onclick = () => overlay.remove();
+    doc.getElementById('akexa-publish-login').onclick = async () => {
+      const c = credentials(); if (!c.email || !c.password) { msg.textContent = 'Email এবং password দিন।'; return; }
+      try { const { error } = await getClient().auth.signInWithPassword(c); if (error) throw error; overlay.remove(); afterLogin(); }
+      catch (e) { msg.textContent = e.message || String(e); msg.style.color = '#ff8f8f'; }
+    };
+    doc.getElementById('akexa-publish-signup').onclick = async () => {
+      const c = credentials(); if (!c.email || !c.password) { msg.textContent = 'Email এবং password দিন।'; return; }
+      if (c.password.length < 6) { msg.textContent = 'Password কমপক্ষে ৬ অক্ষরের হতে হবে।'; return; }
+      try {
+        const { data, error } = await getClient().auth.signUp(c); if (error) throw error;
+        if (data.session) { overlay.remove(); afterLogin(); }
+        else { msg.textContent = 'Account তৈরি হয়েছে। Email verification করে আবার Login করুন।'; msg.style.color = '#79e2a4'; }
+      } catch (e) { msg.textContent = e.message || String(e); msg.style.color = '#ff8f8f'; }
+    };
+  }
+
   function patchPublish() {
     if (publishWrapped || typeof root.akexaBazarPublish !== 'function') return;
     const originalPublish = root.akexaBazarPublish;
     root.akexaBazarPublish = async function (id) {
-      try { return await originalPublish.call(root, id); }
-      catch (error) { console.error('AKEXA AI Bazar publish error:', error); alert('Publish failed: ' + (error?.message || String(error))); return false; }
+      try {
+        if (root.supabase?.createClient) {
+          const client = root.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+          const { data } = await client.auth.getUser();
+          if (!data?.user) { showPublishAuth(() => root.akexaBazarPublish(id)); return false; }
+        }
+        return await originalPublish.call(root, id);
+      } catch (error) { console.error('AKEXA AI Bazar publish error:', error); alert('Publish failed: ' + (error?.message || String(error))); return false; }
     };
     root.akexaBazarPublish.__akexaWrapped = true; publishWrapped = true;
   }
@@ -91,21 +147,15 @@
       if (!saved[index] || chip.querySelector('.akexa-inline-publish')) return;
       chip.style.gap = '7px';
       const button = doc.createElement('button');
-      button.type = 'button';
-      button.className = 'akexa-inline-publish';
-      button.textContent = 'Publish';
-      button.title = 'Publish this agent to AI Bazar';
+      button.type = 'button'; button.className = 'akexa-inline-publish'; button.textContent = 'Publish to Bazar'; button.title = 'Publish this agent to AI Bazar';
       button.style.cssText = 'margin-left:auto;flex-shrink:0;border:1px solid rgba(167,139,250,.35);background:rgba(124,58,237,.18);color:#c4b5fd;border-radius:7px;padding:4px 7px;font-size:10px;font-weight:700;cursor:pointer;';
-      button.onclick = event => {
-        event.preventDefault();
-        event.stopPropagation();
-        root.akexaBazarPublish(saved[index].id);
-      };
+      button.onclick = event => { event.preventDefault(); event.stopPropagation(); root.akexaBazarPublish(saved[index].id); };
       chip.appendChild(button);
     });
   }
 
   function patch() {
+    syncAgentStorage();
     const item = doc.getElementById('akexa-bazar-nav'); if (item) item.onclick = event => { event?.preventDefault(); event?.stopPropagation(); open(); return false; };
     const browse = doc.getElementById('akexa-browse-btn'); if (browse) browse.onclick = event => { event?.preventDefault(); event?.stopPropagation(); open(); return false; };
     const sell = doc.getElementById('akexa-sell-btn'); if (sell) sell.onclick = event => { event?.preventDefault(); event?.stopPropagation(); open(); return false; };
