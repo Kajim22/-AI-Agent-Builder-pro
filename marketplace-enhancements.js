@@ -82,11 +82,34 @@
     });
   }
 
+  function addPublishButtonsToMyAgents() {
+    const list = doc.getElementById('agent-list');
+    if (!list || typeof root.akexaBazarPublish !== 'function') return;
+    let saved = [];
+    try { saved = JSON.parse(root.localStorage.getItem('ah_agents') || '[]'); } catch (_) { saved = []; }
+    Array.from(list.children).forEach((chip, index) => {
+      if (!saved[index] || chip.querySelector('.akexa-inline-publish')) return;
+      chip.style.gap = '7px';
+      const button = doc.createElement('button');
+      button.type = 'button';
+      button.className = 'akexa-inline-publish';
+      button.textContent = 'Publish';
+      button.title = 'Publish this agent to AI Bazar';
+      button.style.cssText = 'margin-left:auto;flex-shrink:0;border:1px solid rgba(167,139,250,.35);background:rgba(124,58,237,.18);color:#c4b5fd;border-radius:7px;padding:4px 7px;font-size:10px;font-weight:700;cursor:pointer;';
+      button.onclick = event => {
+        event.preventDefault();
+        event.stopPropagation();
+        root.akexaBazarPublish(saved[index].id);
+      };
+      chip.appendChild(button);
+    });
+  }
+
   function patch() {
     const item = doc.getElementById('akexa-bazar-nav'); if (item) item.onclick = event => { event?.preventDefault(); event?.stopPropagation(); open(); return false; };
     const browse = doc.getElementById('akexa-browse-btn'); if (browse) browse.onclick = event => { event?.preventDefault(); event?.stopPropagation(); open(); return false; };
     const sell = doc.getElementById('akexa-sell-btn'); if (sell) sell.onclick = event => { event?.preventDefault(); event?.stopPropagation(); open(); return false; };
-    patchMarketplaceActions(); patchPublish();
+    patchMarketplaceActions(); patchPublish(); addPublishButtonsToMyAgents();
   }
 
   patch(); let tries = 0;
