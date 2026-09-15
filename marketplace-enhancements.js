@@ -165,3 +165,58 @@
   patch(); let tries = 0;
   const timer = setInterval(() => { patch(); tries += 1; if (tries >= 80 || (typeof root.akexaBazarOpen === 'function' && publishWrapped)) clearInterval(timer); }, 250);
 })();
+/* Supabase bearer-token bridge */
+(function () {
+  'use strict';
+
+  const API_HOST = 'https://kajim-ai-agent-backend.onrender.com';
+  const originalFetch = window.fetch.bind(window);
+
+  function getAccessToken() {
+    try {
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i) || '';
+
+        if (!key.includes('auth-token')) continue;
+
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+
+        const parsed = JSON.parse(raw);
+
+        if (parsed?.access_token) return parsed.access_token;
+        if (parsed?.currentSession?.access_token) {
+          return parsed.currentSession.access_token;
+        }
+      }
+    } catch (_) {}
+
+    return '';
+  }
+
+  window.fetch = async function (input, init = {}) {
+    const url = typeof input === 'string' ? input : input?.url || '';
+
+    if (!url.startsWith(API_HOST)) {
+      return originalFetch(input, init);
+    }
+
+    const headers = new Headers(
+      init.headers || (typeof input !== 'string' ? input.headers : undefined)
+    );
+
+    const token = getAccessToken();
+
+    if (token && !headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+
+    if (!headers.has('Accept')) {
+      headers.set('Accept', 'application/json');
+    }
+
+    return originalFetch(input, { ...init, headers });
+  };
+
+  console.info('[AKEXA] Frontend auth bridge installed');
+})();
