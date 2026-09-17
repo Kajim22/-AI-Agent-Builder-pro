@@ -26,7 +26,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .logo-name{font-weight:800;font-size:16px;background:linear-gradient(135deg,var(--accent2),#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
 .logo-tag{font-size:10px;color:var(--text3);font-weight:500;letter-spacing:.5px;}
 
-.sidebar-nav{padding:14px 10px;flex:1;overflow-y:auto;}
+.sidebar-nav {
+  padding: 14px 10px;
+  flex: 0 0 auto;
+  overflow: visible;
+}
 .nav-group-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px;padding:10px 8px 5px;font-weight:600;}
 .nav-item{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:var(--radius-sm);cursor:pointer;color:var(--text2);font-size:13px;font-weight:500;transition:all 0.18s;margin-bottom:2px;position:relative;}
 .nav-item:hover{background:var(--surface2);color:var(--text);}
@@ -35,7 +39,31 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .nav-icon{font-size:16px;width:22px;text-align:center;}
 .nav-badge{margin-left:auto;background:var(--accent);color:white;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;}
 
-.agent-section{padding:10px;border-top:1px solid var(--border);}
+.agent-section {
+  padding: 10px;
+  border-top: 1px solid var(--border);
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.agent-section .nav-group-label {
+  flex-shrink: 0;
+}
+
+#agent-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+
+.add-agent-btn {
+  flex-shrink: 0;
+}
 .agent-chip{padding:9px 10px;border-radius:var(--radius-xs);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s;margin-bottom:2px;}
 .agent-chip:hover{background:var(--surface2);color:var(--text);}
 .agent-chip.selected{background:rgba(108,99,255,0.15);color:var(--accent3);}
@@ -163,17 +191,107 @@ input::placeholder,textarea::placeholder{color:var(--text3);}
 .mobile-toggle{display:none;position:fixed;top:14px;left:14px;z-index:200;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:9px 11px;cursor:pointer;font-size:16px;box-shadow:var(--shadow);}
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99;backdrop-filter:blur(4px);}
 .overlay.show{display:block;}
+@media (max-width: 768px) {
+  /* Sidebar mobile behavior */
+  .sidebar {
+    width: 238px;
+    height: 100dvh;
+    max-height: 100dvh;
+    transform: translateX(-100%);
+    overflow: hidden;
+    z-index: 1000;
+  }
 
-@media(max-width:768px){
-  .sidebar{transform:translateX(-100%);}
-  .sidebar.open{transform:translateX(0);}
-  .main{margin-left:0;}
-  .mobile-toggle{display:block;}
-  .topbar{padding-left:56px;}
-  .stats-grid{grid-template-columns:repeat(2,1fr);}
-  .int-grid{grid-template-columns:1fr;}
-  .btn-group{flex-direction:column;}
-  .content{padding:18px;}
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Main content uses full mobile width */
+  .main {
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+  }
+
+  /* Mobile menu button */
+  .mobile-toggle {
+    display: block;
+  }
+
+  .topbar {
+    padding-left: 56px;
+  }
+
+  /* Sidebar navigation gets a controlled height */
+  .sidebar-nav {
+    flex: 0 0 auto;
+    max-height: 42vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* Agent section fills remaining space */
+  .agent-section {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Only agent list scrolls */
+  #agent-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* New agent button stays visible */
+  .add-agent-btn {
+    flex-shrink: 0;
+  }
+
+  /* Mobile content */
+  .content {
+    width: 100%;
+    max-width: 100%;
+    padding: 18px;
+    box-sizing: border-box;
+  }
+
+  /* Responsive grids */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .int-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .template-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .btn-group {
+    flex-direction: column;
+  }
+
+  /* Prevent long agent names from expanding the sidebar */
+  .agent-chip {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .agent-name-text {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 /* TEMPLATE CARDS */
