@@ -1,0 +1,33 @@
+/* AKEXA AI Bazar mobile responsive fix */
+@media (max-width: 768px) {
+  html, body { width: 100%; min-width: 0; overflow-x: hidden; }
+  .sidebar { width: 238px; transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; width: 100%; min-width: 0; }
+  .topbar { padding: 10px 12px; gap: 8px; flex-wrap: wrap; }
+  .topbar-title { font-size: 13px; }
+  .topbar-right { margin-left: auto; }
+  .content { padding: 12px; gap: 14px; max-width: 100%; }
+  .card-header { padding: 13px 14px; gap: 8px; flex-wrap: wrap; }
+  .card-body { padding: 14px; gap: 12px; }
+  .card-title { font-size: 12px; }
+  .int-grid, .stats-grid { grid-template-columns: 1fr; }
+  .chat-wrap { min-height: 220px; max-height: 360px; padding: 10px; }
+  .bubble { max-width: 92%; font-size: 12px; }
+  .chat-input-row { gap: 6px; }
+  .chat-input-row textarea { min-width: 0; font-size: 12px; }
+  .chat-input-row .btn { width: 44px; padding: 0; }
+  .share-box { align-items: stretch; flex-direction: column; }
+  .share-box .btn { width: 100%; }
+  .share-link { font-size: 10px; }
+  .template-grid { grid-template-columns: 1fr !important; }
+  .form-grid, .two-col, .three-col { grid-template-columns: 1fr !important; }
+  .table-wrap, table { max-width: 100%; overflow-x: auto; }
+  input, textarea, select { max-width: 100%; font-size: 12px; }
+  .btn-group { gap: 6px; }
+  .btn { padding: 9px 12px; font-size: 12px; }
+}
+@media (min-width: 769px) {
+  .mobile-menu-btn { display: none !important; }
+}
+.mobile-menu-btn { display: inline-flex; }
