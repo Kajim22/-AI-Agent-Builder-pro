@@ -316,6 +316,59 @@ input::placeholder,textarea::placeholder{color:var(--text3);}
     grid-template-columns: 1fr !important;
   }
 }
+  /* Agent list overflow fix */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-header,
+.sidebar-nav,
+.sidebar-footer {
+  flex-shrink: 0;
+}
+
+.agent-list,
+.agents-list,
+#agent-list {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  padding-right: 4px;
+}
+
+.agent-list > *,
+.agents-list > *,
+#agent-list > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.agent-list button,
+.agents-list button,
+#agent-list button {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .sidebar {
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+
+  .agent-list,
+  .agents-list,
+  #agent-list {
+    max-height: none;
+    overflow-y: auto;
+  }
+}
 </style>
 </head>
 <body>
