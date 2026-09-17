@@ -220,3 +220,99 @@
 
   console.info('[AKEXA] Frontend auth bridge installed');
 })();
+
+/* Facebook multi-page UI + connection recovery */
+(function () {
+  'use strict';
+  const API = 'https://kajim-ai-agent-backend.onrender.com';
+
+  function getDoc() { return document; }
+  function getAgentId() { return window.activeId || ''; }
+
+  async function api(path, options = {}) {
+    const headers = new Headers(options.headers || {});
+    headers.set('Content-Type', 'application/json');
+    return fetch(API + path, { ...options, headers });
+  }
+
+  function ensurePanel() {
+    const doc = getDoc();
+    const card = doc.getElementById('c-fb');
+    if (!card) return null;
+    let panel = doc.getElementById('akexa-facebook-pages');
+    if (!panel) {
+      panel = doc.createElement('div');
+      panel.id = 'akexa-facebook-pages';
+      panel.style.cssText = 'margin-top:10px;padding:10px;border-top:1px solid var(--border,#2a2a40);font-size:11px;';
+      const parent = card.closest('.int-card') || card.parentElement;
+      (parent || card).appendChild(panel);
+    }
+    return panel;
+  }
+
+  async function refreshPages() {
+    const agentId = getAgentId();
+    const panel = ensurePanel();
+    if (!agentId || !panel) return;
+    try {
+      const response = await api('/facebook/pages/' + encodeURIComponent(agentId));
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || 'Pages load failed');
+      const pages = Array.isArray(data.pages) ? data.pages : [];
+      const status = document.getElementById('s-fb');
+      if (status) status.textContent = pages.length ? `✅ ${pages.length}টি Facebook Page connected` : 'Not connected';
+      const card = document.getElementById('c-fb');
+      if (card) card.classList.toggle('connected', pages.length > 0);
+      panel.innerHTML = pages.length
+        ? '<div style="font-weight:700;margin-bottom:7px;color:var(--text,#f0f0ff)">Connected Pages</div>' + pages.map(p => `<div data-fb-page="${String(p.page_id).replace(/"/g,'&quot;')}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--border,#2a2a40)"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📘 ${p.page_id}</span><button type="button" data-fb-disconnect="${p.page_id}" style="border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#ff8a8a;border-radius:6px;padding:4px 7px;font-size:10px;cursor:pointer">Disconnect</button></div>`).join('') + '<button type="button" id="akexa-fb-connect-more" class="btn btn-sm btn-ghost" style="margin-top:8px;width:100%">＋ Connect another Page</button>'
+        : '<div style="color:var(--text3,#50506a)">No Facebook Page connected.</div><button type="button" id="akexa-fb-connect-more" class="btn btn-sm btn-ghost" style="margin-top:8px;width:100%">＋ Connect Page</button>';
+      panel.querySelectorAll('[data-fb-disconnect]').forEach(btn => btn.onclick = async e => {
+        e.preventDefault(); e.stopPropagation();
+        if (!confirm('এই Facebook Page disconnect করবেন?')) return;
+        const pageId = btn.getAttribute('data-fb-disconnect');
+        const response = await api('/facebook/disconnect', { method:'POST', body: JSON.stringify({ pageId, agentId }) });
+        const result = await response.json();
+        if (!result.success) { alert(result.error || 'Disconnect failed'); return; }
+        await refreshPages();
+      });
+      const more = panel.querySelector('#akexa-fb-connect-more');
+      if (more) more.onclick = e => { e.preventDefault(); e.stopPropagation(); window.connectFacebook(); };
+    } catch (error) {
+      panel.innerHTML = `<div style="color:#ff8a8a">Facebook pages load failed: ${String(error.message || error)}</div>`;
+    }
+  }
+
+  window.connectFacebook = async function () {
+    const agentId = getAgentId();
+    if (!agentId) { if (typeof window.toast === 'function') window.toast('আগে একটা এজেন্ট সিলেক্ট করুন','error'); return; }
+    const agent = Array.isArray(window.agents) ? window.agents.find(x => x.id === agentId) : null;
+    const pageId = prompt('Facebook Page ID দিন:');
+    if (!pageId) return;
+    const pageAccessToken = prompt('নতুন Page Access Token পেস্ট করুন:');
+    if (!pageAccessToken) return;
+    if (typeof window.toast === 'function') window.toast('Facebook Page কানেক্ট করা হচ্ছে...','success');
+    try {
+      const response = await api('/facebook/connect', {
+        method:'POST',
+        body: JSON.stringify({ pageId: pageId.trim(), pageAccessToken: pageAccessToken.trim(), systemPrompt: agent?.prompt || agent?.system_prompt || 'তুমি একজন সহকারী।', agentId })
+      });
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || 'Facebook connect failed');
+      if (typeof window.toast === 'function') window.toast(`✅ Page connected — এই Agent-এর মোট ${data.connectedPages || 1}টি Page`, 'success');
+      await refreshPages();
+    } catch (error) {
+      if (typeof window.toast === 'function') window.toast('Facebook error: ' + (error.message || error), 'error');
+      else alert('Facebook error: ' + (error.message || error));
+    }
+  };
+
+  function boot() {
+    refreshPages();
+    const observer = new MutationObserver(() => {
+      if (document.getElementById('c-fb')) refreshPages();
+    });
+    observer.observe(document.body, { childList:true, subtree:true });
+    setInterval(refreshPages, 8000);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
