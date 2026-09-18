@@ -808,6 +808,20 @@ let activeId = null;
 let history = [];
 let msgCount = parseInt(localStorage.getItem('ah_msgs')||'0');
 let conns = JSON.parse(localStorage.getItem('ah_conns')||'{}');
+
+// Expose the core Agent Builder state to integration modules.
+// marketplace-enhancements.js and Facebook connector run as separate scripts
+// and must be able to read/write the currently selected Agent.
+Object.defineProperty(window, 'agents', {
+  configurable: true,
+  get: () => agents,
+  set: value => { agents = Array.isArray(value) ? value : []; }
+});
+Object.defineProperty(window, 'activeId', {
+  configurable: true,
+  get: () => activeId,
+  set: value => { activeId = value; }
+});
 let cfg = JSON.parse(localStorage.getItem('ah_cfg')||'{}');
 
 window.onload = () => {
