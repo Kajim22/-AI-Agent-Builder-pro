@@ -36,7 +36,7 @@
         existing.addEventListener('error', () => resolve(false), { once: true });
         setTimeout(() => resolve(typeof root.akexaBazarOpen === 'function' || typeof root.openMarketplace === 'function'), 2000); return;
       }
-      const script = doc.createElement('script'); script.id = 'akexa-bazar-script'; script.src = '/marketplace.js?v=20260918k';
+      const script = doc.createElement('script'); script.id = 'akexa-bazar-script'; script.src = '/marketplace.js?v=20260918g';
       script.onload = () => resolve(typeof root.akexaBazarOpen === 'function' || typeof root.openMarketplace === 'function');
       script.onerror = () => resolve(false); doc.head.appendChild(script);
     });
