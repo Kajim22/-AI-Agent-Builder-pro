@@ -52,17 +52,33 @@
     const overlay=doc.createElement('div');overlay.id='akexa-bazar-overlay';overlay.className='akexa-bazar-overlay open';overlay.innerHTML=`<div class="akexa-bazar"><div class="akexa-bazar-head"><div><h2>${BRAND}</h2><p>${TAGLINE}</p></div><button class="akexa-bazar-close" id="akexa-bazar-close">Close</button></div><div class="akexa-bazar-body"><div class="akexa-bazar-toolbar"><button class="btn btn-primary btn-sm" id="akexa-refresh">Refresh</button><button class="btn btn-ghost btn-sm" id="akexa-myagents">My Agents</button></div>${(cards||draftCards)?`<div class="akexa-bazar-grid">${cards}${draftCards}</div>`:`<div class="akexa-empty">No agents are published yet.<br>Create an agent first, then publish it here.</div>`}<div class="akexa-bazar-note">Listings and publishing are now connected to Supabase. Subscription requests are server-validated; payment gateway is not connected yet.</div></div></div>`;doc.body.appendChild(overlay);doc.getElementById('akexa-bazar-close').onclick=()=>overlay.remove();doc.getElementById('akexa-refresh').onclick=()=>render(win,doc);doc.getElementById('akexa-myagents').onclick=()=>{overlay.remove();if(typeof win.showSection==='function')win.showSection('agents');};
   }
   async function details(id,win,doc){
-    const client=await loadSupabase(doc);const {data:x,error}=await client.from('marketplace_agents').select('id,name,description,category,monthly_price,commission_percent,owner_user_id,status').eq('id',id).eq('status','published').single();if(error||!x){alert('Agent not found.');return;}
+    const client=await loadSupabase(doc);
+    const {data:x,error}=await client.from('marketplace_agents').select('id,agent_id,name,description,category,monthly_price,commission_percent,owner_user_id,status').eq('id',id).eq('status','published').single();
+    if(error||!x){alert('Agent not found.');return;}
+    const {data:{user}}=await client.auth.getUser();
+    const isOwner=!!user && String(x.owner_user_id)===String(user.id);
     const old=doc.getElementById('akexa-bazar-detail');if(old)old.remove();
     const price=Number(x.monthly_price)||0;
     const priceText=price>0?'৳'+esc(price.toFixed(2)):'Free';
     const commission=x.commission_percent==null?15:Number(x.commission_percent);
-    const overlay=doc.createElement('div');overlay.id='akexa-bazar-detail';overlay.className='akexa-bazar-overlay open';overlay.innerHTML=`<div class="akexa-bazar"><div class="akexa-bazar-head"><div><h2>AKEXA AI Bazar</h2><p>Agent details</p></div><button class="akexa-bazar-close" id="akexa-detail-close">Close</button></div><div class="akexa-bazar-body"><div class="akexa-detail-hero"><div class="akexa-detail-title"><div class="akexa-detail-icon">🤖</div><div><h2>${esc(x.name)}</h2><span class="akexa-category">${esc(x.category||'Business')}</span></div></div><div class="akexa-detail-price"><strong>${priceText}</strong><span>${price>0?'/ month':'No monthly charge'}</span></div></div><div class="akexa-detail-section"><h4>About this agent</h4><p>${esc(x.description||'This AI agent is designed to help automate business tasks and customer interactions.')}</p></div><div class="akexa-detail-section"><h4>What you get</h4><div class="akexa-detail-trust"><span>🤖 AI Agent</span><span>⚙️ Business Automation</span><span>🔗 Integration Ready</span><span>🛡️ Server-validated</span></div></div><div class="akexa-detail-section"><h4>Pricing</h4><p>${price>0?'Subscription: '+priceText+' / month.':'This agent is currently free.'} Marketplace commission: ${esc(commission)}% applies to seller payouts according to the platform configuration.</p></div><div class="akexa-detail-actions"><button class="btn btn-primary" id="akexa-buy-btn">${price>0?'Subscribe & Get Agent':'Get Agent — Free'}</button><button class="btn btn-ghost" id="akexa-back-bazar">Back to Bazar</button></div><div class="akexa-detail-note">Payment is not charged yet. The current button creates a pending subscription only; live payment gateway checkout will be connected separately.</div></div></div>`;
+    const actionLabel=isOwner?'Use My Agent':(price>0?'Subscribe & Get Agent':'Get Agent — Free');
+    const actionNote=isOwner?'This is your own Agent. No subscription or payment is required.':price>0?'Subscription will be created as pending until payment is connected.':'This Agent is free.';
+    const overlay=doc.createElement('div');overlay.id='akexa-bazar-detail';overlay.className='akexa-bazar-overlay open';
+    overlay.innerHTML=`<div class="akexa-bazar"><div class="akexa-bazar-head"><div><h2>AKEXA AI Bazar</h2><p>Agent details</p></div><button class="akexa-bazar-close" id="akexa-detail-close">Close</button></div><div class="akexa-bazar-body"><div class="akexa-detail-hero"><div class="akexa-detail-title"><div class="akexa-detail-icon">🤖</div><div><h2>${esc(x.name)}</h2><span class="akexa-category">${esc(x.category||'Business')}</span></div></div><div class="akexa-detail-price"><strong>${priceText}</strong><span>${price>0?'/ month':'No monthly charge'}</span></div></div><div class="akexa-detail-section"><h4>About this agent</h4><p>${esc(x.description||'This AI agent is designed to help automate business tasks and customer interactions.')}</p></div><div class="akexa-detail-section"><h4>What you get</h4><div class="akexa-detail-trust"><span>🤖 AI Agent</span><span>⚙️ Business Automation</span><span>🔗 Integration Ready</span><span>🛡️ Server-validated</span></div></div><div class="akexa-detail-section"><h4>Pricing</h4><p>${isOwner?'Owner access: no subscription required.':price>0?'Subscription: '+priceText+' / month.':'This agent is currently free.'} Marketplace commission: ${esc(commission)}% applies to seller payouts according to the platform configuration.</p></div><div class="akexa-detail-actions"><button class="btn btn-primary" id="akexa-buy-btn">${actionLabel}</button><button class="btn btn-ghost" id="akexa-back-bazar">Back to Bazar</button></div><div class="akexa-detail-note">${actionNote}</div></div></div>`;
     doc.body.appendChild(overlay);
     doc.getElementById('akexa-detail-close').onclick=()=>overlay.remove();
     doc.getElementById('akexa-back-bazar').onclick=()=>{overlay.remove();render(win,doc);};
-    doc.getElementById('akexa-buy-btn').onclick=()=>subscribe(x.id,win,doc);
+    doc.getElementById('akexa-buy-btn').onclick=async()=>{
+      if(isOwner){
+        if(typeof win.selectAgent==='function') win.selectAgent(String(x.agent_id||x.id));
+        overlay.remove();
+        if(typeof win.showSection==='function') win.showSection('test');
+        return;
+      }
+      subscribe(x.id,win,doc);
+    };
   }
+
   function mount(win,doc){
     if(!doc)return false;
     currentWin=win;currentDoc=doc;injectStyles(doc);
