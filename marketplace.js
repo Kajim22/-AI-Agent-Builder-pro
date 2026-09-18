@@ -70,35 +70,144 @@
     doc.getElementById('akexa-back-bazar').onclick=()=>{overlay.remove();render(win,doc);};
     doc.getElementById('akexa-buy-btn').onclick=async()=>{
       if(isOwner){
-        const targetId=String(x.agent_id||'');
-        let selected=false;
-        try{
-          if(targetId && typeof win.akexaActivateAgent==='function'){
-            selected=!!win.akexaActivateAgent(targetId);
-          }
-          // Compatibility fallback for older cached app-core.html.
-          if(!selected && targetId && Array.isArray(win.agents)){
-            const localAgent=win.agents.find(a=>String(a.id)===targetId);
-            if(localAgent){
-              if(typeof win.selectAgent==='function') win.selectAgent(localAgent.id);
-              win.activeId=localAgent.id;
-              const mainSelect=doc.getElementById('agent-select');
-              if(mainSelect){
-                mainSelect.value=String(localAgent.id);
-                mainSelect.dispatchEvent(new Event('change',{bubbles:true}));
-              }
-              const badge=doc.getElementById('active-badge');
-              const name=doc.getElementById('active-name');
-              if(badge) badge.style.display='inline-flex';
-              if(name) name.textContent=localAgent.name;
-              if(typeof win.showSection==='function') win.showSection('test');
-              selected=true;
-            }
-          }
-        }catch(e){console.warn('AKEXA owner agent activation failed:',e);}
-        overlay.remove();
-        if(!selected) alert('AKEXA Sales Assistant আপনার My Agents তালিকায় পাওয়া যায়নি। আগে Agentটি load করুন, তারপর আবার Use My Agent চাপুন.');
-        return;
+  const targetId = String(x.agent_id || '');
+  let selected = false;
+
+  try {
+    // 1. প্রথমে core window-এর agents ব্যবহার করি
+    let agentList = Array.isArray(win.agents) ? win.agents : [];
+
+    // 2. Core agents না থাকলে সঠিক localStorage key থেকে load করি
+    if (!agentList.length) {
+      try {
+        const raw = localStorage.getItem('ah_agents');
+        const stored = raw ? JSON.parse(raw) : [];
+
+        if (Array.isArray(stored) && stored.length) {
+          win.agents = stored;
+          agentList = stored;
+        }
+      } catch (storageError) {
+        console.warn(
+          'AKEXA: ah_agents load failed:',
+          storageError
+        );
+      }
+    }
+
+    // 3. Marketplace-এর agent_id দিয়ে local Agent খুঁজি
+    const localAgent = agentList.find(
+      a => String(a.id) === targetId
+    );
+
+    if (!localAgent) {
+      console.error(
+        'AKEXA: Owner Agent পাওয়া যায়নি',
+        {
+          marketplaceAgentId: x.id,
+          targetAgentId: targetId,
+          availableAgents: agentList.map(a => ({
+            id: a.id,
+            name: a.name
+          }))
+        }
+      );
+
+      alert(
+        'AKEXA Sales Assistant আপনার My Agents list-এ পাওয়া যাচ্ছে না।\\n\\n' +
+        'আগে My Agents থেকে Agentটি load করুন।'
+      );
+
+      return;
+    }
+
+    // 4. Core state update
+    win.activeId = localAgent.id;
+
+    // 5. Core selectAgent() চালানো
+    if (typeof win.selectAgent === 'function') {
+      win.selectAgent(localAgent.id);
+    }
+
+    // 6. Agent dropdown sync
+    const mainSelect = doc.getElementById('agent-select');
+
+    if (mainSelect) {
+      mainSelect.value = String(localAgent.id);
+
+      mainSelect.dispatchEvent(
+        new Event('change', {
+          bubbles: true
+        })
+      );
+    }
+
+    // 7. UI badge সরাসরি update
+    const activeBadge = doc.getElementById('active-badge');
+    const activeName = doc.getElementById('active-name');
+
+    if (activeBadge) {
+      activeBadge.style.display = 'inline-flex';
+    }
+
+    if (activeName) {
+      activeName.textContent = localAgent.name;
+    }
+
+    // 8. Agent chip selected state update
+    doc.querySelectorAll('.agent-chip').forEach(chip => {
+      chip.classList.remove('selected');
+    });
+
+    const chips = doc.querySelectorAll('.agent-chip');
+
+    chips.forEach(chip => {
+      const nameEl = chip.querySelector('.agent-name-text');
+
+      if (
+        nameEl &&
+        nameEl.textContent.trim() ===
+          String(localAgent.name).trim()
+      ) {
+        chip.classList.add('selected');
+      }
+    });
+
+    selected =
+      String(win.activeId) === String(localAgent.id);
+
+    console.log(
+      '✅ AKEXA: Agent successfully activated',
+      {
+        id: localAgent.id,
+        name: localAgent.name
+      }
+    );
+
+  } catch (error) {
+    console.error(
+      '❌ AKEXA owner agent selection failed:',
+      error
+    );
+  }
+
+  if (!selected) {
+    alert(
+      'Agent activate করা যায়নি। Console-এ বিস্তারিত error দেখুন।'
+    );
+    return;
+  }
+
+  // Detail page বন্ধ
+  overlay.remove();
+
+  // Test section-এ নিয়ে যাওয়া
+  if (typeof win.showSection === 'function') {
+    win.showSection('test');
+  }
+
+  return;
+}
       }
       subscribe(x.id,win,doc);
     };
