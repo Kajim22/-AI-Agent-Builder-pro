@@ -73,34 +73,31 @@
         const targetId=String(x.agent_id||'');
         let selected=false;
         try{
-          if(targetId && Array.isArray(win.agents)){
+          if(targetId && typeof win.akexaActivateAgent==='function'){
+            selected=!!win.akexaActivateAgent(targetId);
+          }
+          // Compatibility fallback for older cached app-core.html.
+          if(!selected && targetId && Array.isArray(win.agents)){
             const localAgent=win.agents.find(a=>String(a.id)===targetId);
             if(localAgent){
-              win.activeId=localAgent.id;
               if(typeof win.selectAgent==='function') win.selectAgent(localAgent.id);
+              win.activeId=localAgent.id;
               const mainSelect=doc.getElementById('agent-select');
               if(mainSelect){
                 mainSelect.value=String(localAgent.id);
                 mainSelect.dispatchEvent(new Event('change',{bubbles:true}));
               }
+              const badge=doc.getElementById('active-badge');
+              const name=doc.getElementById('active-name');
+              if(badge) badge.style.display='inline-flex';
+              if(name) name.textContent=localAgent.name;
+              if(typeof win.showSection==='function') win.showSection('test');
               selected=true;
             }
           }
-          if(!selected && targetId){
-            // Fallback: allow the core selector to resolve the ID directly.
-            win.activeId=targetId;
-            if(typeof win.selectAgent==='function') win.selectAgent(targetId);
-            const mainSelect=doc.getElementById('agent-select');
-            if(mainSelect){
-              mainSelect.value=targetId;
-              mainSelect.dispatchEvent(new Event('change',{bubbles:true}));
-            }
-            selected=String(win.activeId)===targetId;
-          }
-        }catch(e){console.warn('AKEXA owner agent selection failed:',e);}
+        }catch(e){console.warn('AKEXA owner agent activation failed:',e);}
         overlay.remove();
-        if(typeof win.showSection==='function') win.showSection('test');
-        if(!selected) alert('Agentটি এই browser session-এর Agent list-এ পাওয়া যাচ্ছে না। আগে My Agents থেকে Agentটি load করুন, তারপর আবার Use My Agent চাপুন.');
+        if(!selected) alert('AKEXA Sales Assistant আপনার My Agents তালিকায় পাওয়া যায়নি। আগে Agentটি load করুন, তারপর আবার Use My Agent চাপুন.');
         return;
       }
       subscribe(x.id,win,doc);
