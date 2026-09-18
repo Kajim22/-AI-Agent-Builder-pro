@@ -1297,6 +1297,55 @@ async function deleteKnowledge(id){
   }
 }
 </script>
+<script>
+/* AKEXA AI Bazar: deterministic loader bridge.
+   The real marketplace module replaces this function when it loads. */
+(function () {
+  'use strict';
+  if (typeof window.akexaBazarOpen === 'function') return;
+  const bridge = function () {
+    const doc = document;
+    const existing = doc.getElementById('akexa-bazar-script');
+    const run = function () {
+      const fn = window.akexaBazarOpen;
+      if (typeof fn === 'function' && fn !== bridge) {
+        fn();
+        return true;
+      }
+      const real = window.openMarketplace;
+      if (typeof real === 'function') {
+        real();
+        return true;
+      }
+      return false;
+    };
+    if (run()) return;
+    const script = existing || (function () {
+      const s = doc.createElement('script');
+      s.id = 'akexa-bazar-script';
+      s.async = false;
+      s.src = './marketplace.js?v=20260918m';
+      (doc.head || doc.body).appendChild(s);
+      return s;
+    })();
+    let tries = 0;
+    const timer = setInterval(function () {
+      tries += 1;
+      if (run() || tries >= 40) {
+        clearInterval(timer);
+        if (tries >= 40) {
+          console.error('[AKEXA] AI Bazar marketplace module failed to initialize.');
+        }
+      }
+    }, 250);
+    script.addEventListener('error', function () {
+      clearInterval(timer);
+      console.error('[AKEXA] marketplace.js failed to load:', script.src);
+    }, { once: true });
+  };
+  window.akexaBazarOpen = bridge;
+})();
+</script>
 <script id="akexa-bazar-script" src="./marketplace.js?v=20260918m"></script>
 <script src="./auth-ui.js"></script>
   <script src="./user-data-sync.js"></script>
