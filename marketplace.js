@@ -250,7 +250,7 @@
   // Expose the opener immediately so the parent shell can detect that the
   // marketplace module itself loaded, even if UI mounting has to wait for DOM.
   // The actual render path is lazy and uses the current window/document.
-  window.akexaBazarOpen=window.akexaBazarOpen||function(){
+  window.akexaBazarOpen=function(){
     try{
       mount(window,document);
       return render(window,document);
