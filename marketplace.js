@@ -91,27 +91,44 @@
     // 1. প্রথমে core window-এর agents ব্যবহার করি
     let agentList = Array.isArray(win.agents) ? win.agents : [];
 
-    // 2. Core agents না থাকলে সঠিক localStorage key থেকে load করি
+    // 2. The canonical My Agents source is Supabase user_agents.
+    // localStorage is only a cache; it may be empty/stale on another device
+    // or after the app is refreshed.
+    try {
+      const {data:ownerRows,error:ownerError}=await client
+        .from('user_agents')
+        .select('id,agent_data')
+        .eq('owner_user_id',user.id);
+
+      if(!ownerError && Array.isArray(ownerRows) && ownerRows.length){
+        const dbAgents=ownerRows.map(row=>{
+          const data=(row && row.agent_data && typeof row.agent_data==='object')
+            ? row.agent_data : {};
+          return {...data,id:String(row.id)};
+        });
+        win.agents=dbAgents;
+        agentList=dbAgents;
+        try{localStorage.setItem('ah_agents',JSON.stringify(dbAgents));}catch(_){}
+      }
+    }catch(dbAgentError){
+      console.warn('AKEXA: canonical user_agents load failed:',dbAgentError);
+    }
+
+    // 3. If DB loading was unavailable, fall back to the local cache.
     if (!agentList.length) {
       try {
         const raw = localStorage.getItem('ah_agents');
         const stored = raw ? JSON.parse(raw) : [];
-
         if (Array.isArray(stored) && stored.length) {
           win.agents = stored;
           agentList = stored;
         }
       } catch (storageError) {
-        console.warn(
-          'AKEXA: ah_agents load failed:',
-          storageError
-        );
+        console.warn('AKEXA: ah_agents load failed:',storageError);
       }
     }
 
-    // 3. Marketplace-এর agent_id দিয়ে local Agent খুঁজি
-    // Match by stable agent id first; owner-owned marketplace rows can also
-    // be matched by name if an older local agent was re-created/re-keyed.
+    // 4. Marketplace agent_id is the primary key; name is a compatibility fallback.
     const localAgent = agentList.find(
       a => String(a.id) === targetId
     ) || agentList.find(
