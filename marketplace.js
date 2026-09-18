@@ -110,8 +110,12 @@
     }
 
     // 3. Marketplace-এর agent_id দিয়ে local Agent খুঁজি
+    // Match by stable agent id first; owner-owned marketplace rows can also
+    // be matched by name if an older local agent was re-created/re-keyed.
     const localAgent = agentList.find(
       a => String(a.id) === targetId
+    ) || agentList.find(
+      a => String(a.name || '').trim().toLowerCase() === String(x.name || '').trim().toLowerCase()
     );
 
     if (!localAgent) {
