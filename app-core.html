@@ -926,9 +926,10 @@ function publishAgent(){
 }
 
 function selectAgent(id){
-  activeId=id;
-  const a=agents.find(x=>x.id===id);
-  if(!a)return;
+  const targetId=String(id??'');
+  const a=agents.find(x=>String(x.id)===targetId);
+  if(!a)return false;
+  activeId=a.id;
   document.getElementById('active-badge').style.display='inline-flex';
   document.getElementById('active-name').textContent=a.name;
   document.getElementById('api-key-test').value=a.key||cfg.key||'';
@@ -940,6 +941,22 @@ function selectAgent(id){
   document.getElementById('share-link-text').textContent=url;
   log(`এজেন্ট লোড: ${a.name}`,'info');
 }
+
+// Public activation bridge for marketplace/integration modules.
+window.akexaActivateAgent = function(id){
+  const targetId=String(id??'');
+  const a=agents.find(x=>String(x.id)===targetId);
+  if(!a) return false;
+  selectAgent(a.id);
+  const sel=document.getElementById('agent-select');
+  if(sel) sel.value=String(a.id);
+  const badge=document.getElementById('active-badge');
+  const name=document.getElementById('active-name');
+  if(badge) badge.style.display='inline-flex';
+  if(name) name.textContent=a.name;
+  showSection('test');
+  return String(activeId)===targetId;
+};
 
 function delAgent(){
   if(!activeId){toast('কোনো এজেন্ট সিলেক্ট নেই','error');return;}
