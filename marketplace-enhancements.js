@@ -154,12 +154,43 @@
     });
   }
 
+  function hardenAgentSelection() {
+    const list = doc.getElementById('agent-list');
+    if (!list || list.dataset.akexaSelectionHardened) return;
+    list.dataset.akexaSelectionHardened = '1';
+    list.addEventListener('click', event => {
+      const chip = event.target.closest('.agent-chip');
+      if (!chip || !list.contains(chip)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const name = (chip.querySelector('.agent-name-text')?.textContent || '').trim();
+      const agentsNow = Array.isArray(root.agents) ? root.agents : [];
+      const agent = agentsNow.find(a => String(a.name).trim() === name);
+      if (!agent) {
+        console.warn('[AKEXA] Agent chip clicked but agent was not found:', name);
+        return;
+      }
+      if (typeof root.selectAgent === 'function') {
+        root.selectAgent(agent.id);
+      } else {
+        root.activeId = agent.id;
+      }
+      const badge = doc.getElementById('active-badge');
+      const activeName = doc.getElementById('active-name');
+      if (badge) badge.style.display = 'inline-flex';
+      if (activeName) activeName.textContent = agent.name;
+      const sel = doc.getElementById('agent-select');
+      if (sel) sel.value = String(agent.id);
+      if (typeof root.showSection === 'function') root.showSection('test');
+    }, true);
+  }
+
   function patch() {
     syncAgentStorage();
     const item = doc.getElementById('akexa-bazar-nav'); if (item) item.onclick = event => { event?.preventDefault(); event?.stopPropagation(); open(); return false; };
     const browse = doc.getElementById('akexa-browse-btn'); if (browse) browse.onclick = event => { event?.preventDefault(); event?.stopPropagation(); open(); return false; };
     const sell = doc.getElementById('akexa-sell-btn'); if (sell) sell.onclick = event => { event?.preventDefault(); event?.stopPropagation(); open(); return false; };
-    patchMarketplaceActions(); patchPublish(); addPublishButtonsToMyAgents();
+    patchMarketplaceActions(); patchPublish(); addPublishButtonsToMyAgents(); hardenAgentSelection();
   }
 
   patch(); let tries = 0;
