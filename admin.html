@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AKEXA AI Bazar — Admin</title>
+<style>
+body{margin:0;background:#08080f;color:#f0f0ff;font-family:Inter,Arial,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:24px}
+h1{margin:0 0 6px}.muted{color:#9090b0}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:22px 0}
+.card{background:#10101b;border:1px solid #2b2b42;border-radius:14px;padding:16px}.value{font-size:25px;font-weight:800;color:#c4b5fd}
+.panel{background:#10101b;border:1px solid #2b2b42;border-radius:14px;margin-top:16px;overflow:auto}
+.panel h2{font-size:15px;padding:16px;margin:0;border-bottom:1px solid #2b2b42}
+table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:10px;border-bottom:1px solid #25253a;text-align:left;white-space:nowrap}th{color:#9090b0}
+button{border:0;border-radius:8px;padding:9px 13px;background:#7c3aed;color:#fff;font-weight:700;cursor:pointer}
+#error{color:#ff8f8f;margin-top:15px}
+@media(max-width:700px){.grid{grid-template-columns:repeat(2,1fr)}.wrap{padding:14px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>AKEXA AI Bazar — Admin</h1>
+  <div class="muted">Internal platform administration</div>
+  <div style="margin-top:16px"><button id="refresh">Refresh</button></div>
+  <div id="error"></div>
+  <div id="stats" class="grid"></div>
+  <div id="agents" class="panel"></div>
+  <div id="subs" class="panel"></div>
+  <div id="payments" class="panel"></div>
+</div>
+<script>
+const SUPABASE_URL='https://yhspipyrgdcdfqqxxges.supabase.co';
+const SUPABASE_KEY='sb_publishable_IcyDHTLjyPPspvcgnYZZiw_q1lUn8QW';
+const ADMIN_FN=SUPABASE_URL+'/functions/v1/akexa-admin';
+let sb=null;
+async function load(){if(sb)return sb;if(!window.supabase){await new Promise((ok,fail)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js';s.onload=ok;s.onerror=fail;document.head.appendChild(s)})}sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);return sb}
+const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+async function run(){
+ document.getElementById('error').textContent='';
+ try{
+  const client=await load(); const {data:{session}}=await client.auth.getSession();
+  if(!session) throw new Error('Login required.');
+  const res=await fetch(ADMIN_FN,{headers:{Authorization:'Bearer '+session.access_token,apikey:SUPABASE_KEY}});
+  const data=await res.json(); if(!res.ok) throw new Error(data.error||'Admin access denied.');
+  document.getElementById('stats').innerHTML=[
+   ['Users',data.users?.length||0],['Agents',data.agents?.length||0],['Subscriptions',data.subscriptions?.length||0],['Payments',data.payments?.length||0]
+  ].map(x=>'<div class="card"><div class="muted">'+x[0]+'</div><div class="value">'+x[1]+'</div></div>').join('');
+  document.getElementById('agents').innerHTML='<h2>Agents</h2><table><tr><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th>Owner</th></tr>'+(data.agents||[]).map(a=>'<tr><td>'+esc(a.name)+'</td><td>'+esc(a.category)+'</td><td>৳'+Number(a.monthly_price||0).toFixed(2)+'</td><td>'+esc(a.status)+'</td><td>'+esc(a.owner_user_id)+'</td></tr>').join('')+'</table>';
+  document.getElementById('subs').innerHTML='<h2>Subscriptions</h2><table><tr><th>Agent</th><th>Buyer</th><th>Owner</th><th>Status</th><th>Price</th></tr>'+(data.subscriptions||[]).map(s=>'<tr><td>'+esc(s.marketplace_agent_id)+'</td><td>'+esc(s.buyer_user_id)+'</td><td>'+esc(s.marketplace_agent_owner_user_id)+'</td><td>'+esc(s.status)+'</td><td>৳'+Number(s.monthly_price||0).toFixed(2)+'</td></tr>').join('')+'</table>';
+  document.getElementById('payments').innerHTML='<h2>Payments</h2><table><tr><th>Reference</th><th>Amount</th><th>Status</th><th>Gateway</th></tr>'+(data.payments||[]).map(p=>'<tr><td>'+esc(p.id)+'</td><td>৳'+Number(p.amount||0).toFixed(2)+'</td><td>'+esc(p.status)+'</td><td>'+esc(p.gateway)+'</td></tr>').join('')+'</table>';
+ }catch(e){document.getElementById('error').textContent=e.message}
+}
+document.getElementById('refresh').onclick=run; run();
+</script>
+</body>
+</html>
