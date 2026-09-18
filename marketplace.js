@@ -242,11 +242,31 @@
     win.akexaBazarDetails=id=>details(id,win,doc);
     return !!doc.getElementById('akexa-bazar-nav');
   }
+  // Expose the opener immediately so the parent shell can detect that the
+  // marketplace module itself loaded, even if UI mounting has to wait for DOM.
+  // The actual render path is lazy and uses the current window/document.
+  window.akexaBazarOpen=window.akexaBazarOpen||function(){
+    try{
+      mount(window,document);
+      return render(window,document);
+    }catch(error){
+      console.error('AKEXA AI Bazar open failed:',error);
+      alert('AI Bazar খুলতে সমস্যা হয়েছে: '+(error?.message||String(error)));
+      return false;
+    }
+  };
+  window.akexaBazarPublish=window.akexaBazarPublish||function(id){return publish(id,window,document);};
+  window.akexaBazarBuy=window.akexaBazarBuy||function(id){return subscribe(id,window,document);};
+  window.akexaBazarDetails=window.akexaBazarDetails||function(id){return details(id,window,document);};
+
   function boot(){
     // This script is loaded INSIDE app-core.html. Do not look for the parent iframe here.
     const doc=document,win=window;
-    if(mount(win,doc))return;
-    let tries=0;const timer=setInterval(()=>{tries++;if(mount(win,doc)||tries>=30)clearInterval(timer);},300);
+    try{
+      mount(win,doc);
+    }catch(error){
+      console.error('AKEXA AI Bazar mount failed:',error);
+    }
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
