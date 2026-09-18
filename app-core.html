@@ -836,7 +836,9 @@ window.onload = () => {
     }
   });
   const aid = new URLSearchParams(location.search).get('agent');
-  if(aid && agents.find(a=>a.id===aid)){ selectAgent(aid); showSection('test'); }
+  const savedActive = localStorage.getItem('ah_active_agent');
+  const initialId = aid || savedActive;
+  if(initialId && agents.find(a=>String(a.id)===String(initialId))){ selectAgent(initialId); if(aid) showSection('test'); }
 };
 
 function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('show'); }
@@ -930,6 +932,7 @@ function selectAgent(id){
   const a=agents.find(x=>String(x.id)===targetId);
   if(!a)return false;
   activeId=a.id;
+  localStorage.setItem('ah_active_agent', String(a.id));
   document.getElementById('active-badge').style.display='inline-flex';
   document.getElementById('active-name').textContent=a.name;
   document.getElementById('api-key-test').value=a.key||cfg.key||'';
