@@ -135,12 +135,17 @@
       return;
     }
 
-    // 4. Core state update
-    win.activeId = localAgent.id;
-
-    // 5. Core selectAgent() চালানো
-    if (typeof win.selectAgent === 'function') {
-      win.selectAgent(localAgent.id);
+    // 4. Activate through the core bridge when available.
+    // This keeps the marketplace and Agent Builder state in sync.
+    if (typeof win.akexaActivateAgent === 'function') {
+      selected = !!win.akexaActivateAgent(localAgent.id);
+    } else {
+      win.activeId = localAgent.id;
+      if (typeof win.selectAgent === 'function') {
+        win.selectAgent(localAgent.id);
+      }
+      localStorage.setItem('ah_active_agent', String(localAgent.id));
+      selected = String(win.activeId) === String(localAgent.id);
     }
 
     // 6. Agent dropdown sync
