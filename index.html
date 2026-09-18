@@ -38,7 +38,7 @@ function loadScript(win,doc,id,src){
   return s
 }
 function ensureBazarScript(win,doc){
-  const src='./marketplace.js?v=20260919a';
+  const src='./marketplace.js?v=20260919c';
   if(win&&typeof win.akexaBazarOpen==='function') return true;
   const existing=doc&&doc.getElementById('akexa-bazar-script');
   if(existing && typeof win?.akexaBazarOpen!=='function') existing.remove();
@@ -54,7 +54,7 @@ function openBazarSafely(){
     const retry=d.createElement('script');
     retry.id='akexa-bazar-retry';
     retry.async=false;
-    retry.src='./marketplace.js?v=20260919a';
+    retry.src='./marketplace.js?v=20260919c';
     retry.onload=()=>console.log('AKEXA AI Bazar retry script loaded');
     retry.onerror=()=>console.error('AKEXA AI Bazar retry script failed:',retry.src);
     (d.head||d.body).appendChild(retry);
