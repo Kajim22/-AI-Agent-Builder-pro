@@ -9,7 +9,21 @@
   const FUNCTION_URL=SUPABASE_URL+'/functions/v1/create-marketplace-subscription';
   let sb=null,ready=null,currentWin=null,currentDoc=null;
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#039;');
-  const getLocalAgents=()=>{try{const raw=localStorage.getItem('agents');const a=raw?JSON.parse(raw):[];return Array.isArray(a)?a:[];}catch{return [];}};
+  const getLocalAgents = () => {
+  try {
+    const raw = localStorage.getItem('ah_agents');
+    const agents = raw ? JSON.parse(raw) : [];
+
+    return Array.isArray(agents) ? agents : [];
+  } catch (error) {
+    console.warn(
+      'AKEXA: Could not load ah_agents:',
+      error
+    );
+
+    return [];
+  }
+};const a=raw?JSON.parse(raw):[];return Array.isArray(a)?a:[];}catch{return [];}};
   function loadSupabase(doc){
     if(sb)return Promise.resolve(sb);if(ready)return ready;
     ready=new Promise((resolve,reject)=>{if(window.supabase?.createClient){sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);resolve(sb);return;}const s=doc.createElement('script');s.src=SUPABASE_SDK;s.onload=()=>{try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);resolve(sb);}catch(e){reject(e);}};s.onerror=()=>reject(new Error('Supabase SDK could not load'));doc.head.appendChild(s);});
