@@ -128,7 +128,7 @@
       );
 
       alert(
-        'AKEXA Sales Assistant আপনার My Agents list-এ পাওয়া যাচ্ছে না।\\n\\n' +
+        'AKEXA Sales Assistant আপনার My Agents list-এ পাওয়া যাচ্ছে না।\n\n' +
         'আগে My Agents থেকে Agentটি load করুন।'
       );
 
