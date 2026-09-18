@@ -1302,7 +1302,7 @@ async function deleteKnowledge(id){
    The real marketplace module replaces this function when it loads. */
 (function () {
   'use strict';
-  if (typeof window.akexaBazarOpen === 'function') return;
+  if (typeof window.akexaBazarOpen === 'function' && !window.akexaBazarOpen.__akexaLoaderBridge) return;
   const bridge = function () {
     const doc = document;
     const existing = doc.getElementById('akexa-bazar-script');
@@ -1343,7 +1343,9 @@ async function deleteKnowledge(id){
       console.error('[AKEXA] marketplace.js failed to load:', script.src);
     }, { once: true });
   };
-  window.akexaBazarOpen = bridge;
+  bridge.__akexaLoaderBridge = true;
+  window.__akexaBazarLoader = bridge;
+  if (typeof window.akexaBazarOpen !== 'function') window.akexaBazarOpen = bridge;
 })();
 </script>
 <script id="akexa-bazar-script" src="./marketplace.js?v=20260919a"></script>
