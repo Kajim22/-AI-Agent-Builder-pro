@@ -23,7 +23,7 @@
 
     return [];
   }
-};const a=raw?JSON.parse(raw):[];return Array.isArray(a)?a:[];}catch{return [];}};
+};
   function loadSupabase(doc){
     if(sb)return Promise.resolve(sb);if(ready)return ready;
     ready=new Promise((resolve,reject)=>{if(window.supabase?.createClient){sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);resolve(sb);return;}const s=doc.createElement('script');s.src=SUPABASE_SDK;s.onload=()=>{try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);resolve(sb);}catch(e){reject(e);}};s.onerror=()=>reject(new Error('Supabase SDK could not load'));doc.head.appendChild(s);});
