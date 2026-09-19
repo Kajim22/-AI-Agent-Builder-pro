@@ -248,7 +248,6 @@
 
   return;
 }
-      }
       subscribe(x.id,win,doc);
     };
   }
