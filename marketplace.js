@@ -41,14 +41,14 @@
     `;doc.head.appendChild(s);
   }
   async function getPublished(){
-    try{const client=await loadSupabase(currentDoc);const {data,error}=await client.from('marketplace_agents').select('id,agent_id,name,description,category,monthly_price,commission_percent,owner_user_id,status').eq('status','published').order('created_at',{ascending:false});if(error)throw error;return data||[];}catch(e){console.warn('Bazar listing failed:',e.message);return [];}
+    try{const client=await loadSupabase(currentDoc);const {data,error}=await client.from('marketplace_agents').select('id,agent_id,name,description,category,monthly_price,commission_percent,owner_user_id,status,agent_data').eq('status','published').order('created_at',{ascending:false});if(error)throw error;return data||[];}catch(e){console.warn('Bazar listing failed:',e.message);return [];}
   }
   async function publish(id,win,doc){
     const client=await loadSupabase(doc);const {data:{user}}=await client.auth.getUser();if(!user){alert('প্রথমে Login/Create account করুন।');return;}
     const agent=getLocalAgents().find(a=>String(a.id)===String(id));if(!agent){alert('Agent not found.');return;}
     const price=prompt('Monthly price for this agent (0 for free):',agent.monthly_price??'9.99');if(price===null)return;const monthly=Number(price);if(!Number.isFinite(monthly)||monthly<0){alert('Invalid monthly price.');return;}
     const category=prompt('Category:',agent.category||'Business')||'Business';
-    const payload={agent_id:String(agent.id),owner_user_id:user.id,name:agent.name||'AI Agent',description:agent.description||'',category,monthly_price:monthly,status:'published'};
+    const payload={agent_id:String(agent.id),owner_user_id:user.id,name:agent.name||'AI Agent',description:agent.description||'',category,monthly_price:monthly,status:'published',agent_data:agent};
     const {error}=await client.from('marketplace_agents').upsert(payload,{onConflict:'owner_user_id,agent_id'});if(error){alert('Publish failed: '+error.message);return;}alert('Agent successfully published to AKEXA AI Bazar.');render(win,doc);
   }
   async function subscribe(id,win,doc){
@@ -86,7 +86,7 @@
   }
   async function details(id,win,doc){
     const client=await loadSupabase(doc);
-    const {data:x,error}=await client.from('marketplace_agents').select('id,agent_id,name,description,category,monthly_price,commission_percent,owner_user_id,status').eq('id',id).eq('status','published').single();
+    const {data:x,error}=await client.from('marketplace_agents').select('id,agent_id,name,description,category,monthly_price,commission_percent,owner_user_id,status,agent_data').eq('id',id).eq('status','published').single();
     if(error||!x){alert('Agent not found.');return;}
     const {data:{user}}=await client.auth.getUser();
     const isOwner=!!user && String(x.owner_user_id)===String(user.id);
@@ -105,8 +105,8 @@
       if(!isOwner && price<=0){
         const newId='market_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
         const name=String(x.name||'AI Agent');
-        const prompt='তুমি একজন AI Agent। তোমার নাম '+name+'.\\n\\nতোমার কাজ: '+String(x.description||'ব্যবহারকারীর প্রশ্ন বুঝে বাস্তবসম্মত ও সহায়ক উত্তর দেওয়া।')+'\\n\\nনির্দেশনা: ব্যবহারকারীর ভাষায় উত্তর দাও, তথ্য বানিয়ে বলো না, প্রয়োজন হলে পরিষ্কার প্রশ্ন করো এবং কাজটি ধাপে ধাপে সম্পন্ন করতে সাহায্য করো।';
-        const local={id:newId,name,prompt,key:'',created:new Date().toISOString(),source:'AKEXA AI Bazar',marketplaceAgentId:String(x.id)};
+        const prompt=String(x.agent_data?.prompt || x.agent_data?.system_prompt || ('তুমি একজন AI Agent। তোমার নাম '+name+'.\\n\\nতোমার কাজ: '+String(x.description||'ব্যবহারকারীর প্রশ্ন বুঝে বাস্তবসম্মত ও সহায়ক উত্তর দেওয়া।')+'\\n\\nনির্দেশনা: ব্যবহারকারীর ভাষায় উত্তর দাও, তথ্য বানিয়ে বলো না, প্রয়োজন হলে পরিষ্কার প্রশ্ন করো এবং কাজটি ধাপে ধাপে সম্পন্ন করতে সাহায্য করো।'));
+        const local={...(x.agent_data&&typeof x.agent_data==='object'?x.agent_data:{}),id:newId,name,prompt,key:'',created:new Date().toISOString(),source:'AKEXA AI Bazar',marketplaceAgentId:String(x.id)};
         try{
           const existing=getLocalAgents();
           existing.push(local);
