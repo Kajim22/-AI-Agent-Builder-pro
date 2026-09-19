@@ -286,7 +286,10 @@
     const panel = ensurePanel();
     if (!agentId || !panel) return;
     try {
-      const response = await api('/facebook/pages/' + encodeURIComponent(agentId));
+      const currentAgent = Array.isArray(window.agents) ? window.agents.find(a => String(a.id) === String(agentId)) : null;
+      const marketplaceAgentId = currentAgent?.marketplaceAgentId || currentAgent?.marketplace_agent_id || '';
+      const pageQuery = marketplaceAgentId ? ('?marketplaceAgentId=' + encodeURIComponent(marketplaceAgentId)) : '';
+      const response = await api('/facebook/pages/' + encodeURIComponent(agentId) + pageQuery);
       const data = await response.json();
       if (!data.success) throw new Error(data.error || 'Pages load failed');
       const pages = Array.isArray(data.pages) ? data.pages : [];
@@ -294,7 +297,6 @@
       if (status) status.textContent = pages.length ? `✅ ${pages.length}টি Facebook Page connected` : 'Not connected';
       const card = document.getElementById('c-fb');
       if (card) card.classList.toggle('connected', pages.length > 0);
-      const currentAgent = Array.isArray(window.agents) ? window.agents.find(a => String(a.id) === String(agentId)) : null;
       const currentAgentName = currentAgent?.name || 'Selected Agent';
       panel.innerHTML = pages.length
         ? '<div style="font-weight:700;margin-bottom:7px;color:var(--text,#f0f0ff)">🟢 Facebook Connection</div>' +
@@ -330,7 +332,7 @@
     try {
       const response = await api('/facebook/connect', {
         method:'POST',
-        body: JSON.stringify({ pageId: pageId.trim(), pageAccessToken: pageAccessToken.trim(), systemPrompt: agent?.prompt || agent?.system_prompt || 'তুমি একজন সহকারী।', agentId })
+        body: JSON.stringify({ pageId: pageId.trim(), pageAccessToken: pageAccessToken.trim(), systemPrompt: agent?.prompt || agent?.system_prompt || 'তুমি একজন সহকারী।', agentId, marketplaceAgentId: agent?.marketplaceAgentId || agent?.marketplace_agent_id || '' })
       });
       const data = await response.json();
       if (!data.success) throw new Error(data.error || 'Facebook connect failed');
