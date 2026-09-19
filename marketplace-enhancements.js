@@ -9,7 +9,7 @@
   let publishWrapped = false;
 
   function openMarketplaceNow() {
-    const opener = root.openMarketplace || root.akexaBazarOpen;
+    const opener = root.akexaBazarOpen;
     if (typeof opener === 'function') { opener.call(root); return true; }
     return false;
   }
