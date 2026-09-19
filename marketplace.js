@@ -13,8 +13,14 @@
   try {
     const raw = localStorage.getItem('ah_agents');
     const agents = raw ? JSON.parse(raw) : [];
-
-    return Array.isArray(agents) ? agents : [];
+    if (!Array.isArray(agents)) return [];
+    const seen = new Set();
+    return agents.filter(a => {
+      const key = String(a?.id || '').trim() || String(a?.name || '').trim().toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   } catch (error) {
     console.warn(
       'AKEXA: Could not load ah_agents:',
@@ -60,10 +66,23 @@
     doc.getElementById('akexa-signup').onclick=async()=>{const c=credentials();if(!c.email||!c.password){msg.textContent='Email and password দিন।';return;}if(c.password.length<6){msg.textContent='Password কমপক্ষে ৬ অক্ষরের হতে হবে।';return;}const client=await loadSupabase(doc);const {data,error}=await client.auth.signUp(c);if(error){msg.textContent=error.message;msg.className='akexa-msg akexa-error';return;}if(data.session){overlay.remove();subscribe(agentId,win,doc);}else{msg.textContent='Account তৈরি হয়েছে। Email verification লাগতে পারে; verify করে আবার Login করুন।';msg.className='akexa-msg akexa-success';}};
   }
   async function render(win,doc){
-    currentWin=win;currentDoc=doc;const old=doc.getElementById('akexa-bazar-overlay');if(old)old.remove();const published=await getPublished();const created=getLocalAgents();
+    currentWin=win;currentDoc=doc;
+    const old=doc.getElementById('akexa-bazar-overlay');if(old)old.remove();
+    const published=await getPublished();
+    const created=getLocalAgents();
+    let user=null;
+    try{const client=await loadSupabase(doc);const auth=await client.auth.getUser();user=auth?.data?.user||null;}catch(_){ }
+    const publishedKeys=new Set((published||[]).map(x=>String(x.agent_id||'')));
+    const publishedNames=new Set((published||[]).map(x=>String(x.name||'').trim().toLowerCase()));
     const cards=published.map(x=>`<div class="akexa-agent-card"><h3>🤖 ${esc(x.name)}</h3><p>${esc(x.description||'AI agent for business automation.')}</p><div class="akexa-agent-meta"><span>${esc(x.category||'Business')}</span><span class="akexa-price">${Number(x.monthly_price)>0?'৳'+esc(Number(x.monthly_price).toFixed(2))+' / month':'Free'}</span></div><button class="btn btn-primary btn-sm" onclick="window.akexaBazarDetails('${esc(x.id)}')">View Agent</button></div>`).join('');
-    const draftCards=created.map(a=>`<div class="akexa-agent-card"><h3>⚙️ ${esc(a.name||'Unnamed Agent')}</h3><p>Publish this agent to make it available in AKEXA AI Bazar.</p><div class="akexa-agent-meta"><span>My Agent</span><span class="akexa-price">Publish</span></div><button class="btn btn-success btn-sm" onclick="window.akexaBazarPublish('${esc(a.id)}')">Publish to Bazar</button></div>`).join('');
-    const overlay=doc.createElement('div');overlay.id='akexa-bazar-overlay';overlay.className='akexa-bazar-overlay open';overlay.innerHTML=`<div class="akexa-bazar"><div class="akexa-bazar-head"><div><h2>${BRAND}</h2><p>${TAGLINE}</p></div><button class="akexa-bazar-close" id="akexa-bazar-close">Close</button></div><div class="akexa-bazar-body"><div class="akexa-bazar-toolbar"><button class="btn btn-primary btn-sm" id="akexa-refresh">Refresh</button><button class="btn btn-ghost btn-sm" id="akexa-myagents">My Agents</button></div>${(cards||draftCards)?`<div class="akexa-bazar-grid">${cards}${draftCards}</div>`:`<div class="akexa-empty">No agents are published yet.<br>Create an agent first, then publish it here.</div>`}<div class="akexa-bazar-note">Listings and publishing are now connected to Supabase. Subscription requests are server-validated; payment gateway is not connected yet.</div></div></div>`;doc.body.appendChild(overlay);doc.getElementById('akexa-bazar-close').onclick=()=>overlay.remove();doc.getElementById('akexa-refresh').onclick=()=>render(win,doc);doc.getElementById('akexa-myagents').onclick=()=>{overlay.remove();if(typeof win.showSection==='function')win.showSection('agents');};
+    const draftCards=created.filter(a=>{
+      const id=String(a?.id||'');const name=String(a?.name||'').trim().toLowerCase();
+      if(user && publishedKeys.has(id)) return false;
+      if(user && name && publishedNames.has(name)) return false;
+      return true;
+    }).map(a=>`<div class="akexa-agent-card"><h3>⚙️ ${esc(a.name||'Unnamed Agent')}</h3><p>Your local agent. Publish it once to make it available in the Bazar.</p><div class="akexa-agent-meta"><span>My Agent</span><span class="akexa-price">Draft</span></div><button class="btn btn-success btn-sm" onclick="window.akexaBazarPublish('${esc(a.id)}')">Publish to Bazar</button></div>`).join('');
+    const hasCards=!!(cards||draftCards);
+    const overlay=doc.createElement('div');overlay.id='akexa-bazar-overlay';overlay.className='akexa-bazar-overlay open';overlay.innerHTML=`<div class="akexa-bazar"><div class="akexa-bazar-head"><div><h2>${BRAND}</h2><p>${TAGLINE}</p></div><button class="akexa-bazar-close" id="akexa-bazar-close">Close</button></div><div class="akexa-bazar-body"><div class="akexa-bazar-toolbar"><button class="btn btn-primary btn-sm" id="akexa-refresh">Refresh</button><button class="btn btn-ghost btn-sm" id="akexa-myagents">My Agents</button></div>${hasCards?`<div class="akexa-bazar-grid">${cards}${draftCards}</div>`:`<div class="akexa-empty">No agents available yet.<br>Create an agent first, then publish it here.</div>`}<div class="akexa-bazar-note">Published agents are usable from their detail page. Paid subscriptions remain pending until a payment gateway is connected.</div></div></div>`;doc.body.appendChild(overlay);doc.getElementById('akexa-bazar-close').onclick=()=>overlay.remove();doc.getElementById('akexa-refresh').onclick=()=>render(win,doc);doc.getElementById('akexa-myagents').onclick=()=>{overlay.remove();if(typeof win.showSection==='function')win.showSection('test');};
   }
   async function details(id,win,doc){
     const client=await loadSupabase(doc);
@@ -75,7 +94,7 @@
     const price=Number(x.monthly_price)||0;
     const priceText=price>0?'৳'+esc(price.toFixed(2)):'Free';
     const commission=x.commission_percent==null?15:Number(x.commission_percent);
-    const actionLabel=isOwner?'Use My Agent':(price>0?'Subscribe & Get Agent':'Get Agent — Free');
+    const actionLabel=isOwner?'Use My Agent':(price>0?'Subscribe & Get Agent':'Use Agent — Free');
     const actionNote=isOwner?'This is your own Agent. No subscription or payment is required.':price>0?'Subscription will be created as pending until payment is connected.':'This Agent is free.';
     const overlay=doc.createElement('div');overlay.id='akexa-bazar-detail';overlay.className='akexa-bazar-overlay open';
     overlay.innerHTML=`<div class="akexa-bazar"><div class="akexa-bazar-head"><div><h2>AKEXA AI Bazar</h2><p>Agent details</p></div><button class="akexa-bazar-close" id="akexa-detail-close">Close</button></div><div class="akexa-bazar-body"><div class="akexa-detail-hero"><div class="akexa-detail-title"><div class="akexa-detail-icon">🤖</div><div><h2>${esc(x.name)}</h2><span class="akexa-category">${esc(x.category||'Business')}</span></div></div><div class="akexa-detail-price"><strong>${priceText}</strong><span>${price>0?'/ month':'No monthly charge'}</span></div></div><div class="akexa-detail-section"><h4>About this agent</h4><p>${esc(x.description||'This AI agent is designed to help automate business tasks and customer interactions.')}</p></div><div class="akexa-detail-section"><h4>What you get</h4><div class="akexa-detail-trust"><span>🤖 AI Agent</span><span>⚙️ Business Automation</span><span>🔗 Integration Ready</span><span>🛡️ Server-validated</span></div></div><div class="akexa-detail-section"><h4>Pricing</h4><p>${isOwner?'Owner access: no subscription required.':price>0?'Subscription: '+priceText+' / month.':'This agent is currently free.'} Marketplace commission: ${esc(commission)}% applies to seller payouts according to the platform configuration.</p></div><div class="akexa-detail-actions"><button class="btn btn-primary" id="akexa-buy-btn">${actionLabel}</button><button class="btn btn-ghost" id="akexa-back-bazar">Back to Bazar</button></div><div class="akexa-detail-note">${actionNote}</div></div></div>`;
@@ -83,6 +102,24 @@
     doc.getElementById('akexa-detail-close').onclick=()=>overlay.remove();
     doc.getElementById('akexa-back-bazar').onclick=()=>{overlay.remove();render(win,doc);};
     doc.getElementById('akexa-buy-btn').onclick=async()=>{
+      if(!isOwner && price<=0){
+        const newId='market_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+        const name=String(x.name||'AI Agent');
+        const prompt='তুমি একজন AI Agent। তোমার নাম '+name+'.\\n\\nতোমার কাজ: '+String(x.description||'ব্যবহারকারীর প্রশ্ন বুঝে বাস্তবসম্মত ও সহায়ক উত্তর দেওয়া।')+'\\n\\nনির্দেশনা: ব্যবহারকারীর ভাষায় উত্তর দাও, তথ্য বানিয়ে বলো না, প্রয়োজন হলে পরিষ্কার প্রশ্ন করো এবং কাজটি ধাপে ধাপে সম্পন্ন করতে সাহায্য করো।';
+        const local={id:newId,name,prompt,key:'',created:new Date().toISOString(),source:'AKEXA AI Bazar',marketplaceAgentId:String(x.id)};
+        try{
+          const existing=getLocalAgents();
+          existing.push(local);
+          localStorage.setItem('ah_agents',JSON.stringify(existing));
+          if(Array.isArray(win.agents)) win.agents.push(local);
+        }catch(e){console.warn('AKEXA free agent save failed:',e);}
+        if(typeof win.akexaActivateAgent==='function') win.akexaActivateAgent(newId);
+        else if(typeof win.selectAgent==='function') win.selectAgent(newId);
+        overlay.remove();
+        if(typeof win.showSection==='function') win.showSection('test');
+        alert('Agentটি আপনার My Agents-এ যোগ হয়েছে। এখন সরাসরি ব্যবহার করতে পারবেন।');
+        return;
+      }
       if(isOwner){
   const targetId = String(x.agent_id || '');
   let selected = false;
