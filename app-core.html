@@ -617,13 +617,13 @@ input::placeholder,textarea::placeholder{color:var(--text3);}
           </div>
           <div class="card-body">
             <div class="field">
-              <label>Gemini API Key</label>
-              <input type="password" id="api-key-test" placeholder="AIza...">
+              <label>AI Engine</label>
+              <div class="info-box" style="margin:0;">🤖 AKEXA AI Engine সক্রিয় — Gemini API আপনার জন্য server-side চালানো হচ্ছে। আলাদা API Key দেওয়ার প্রয়োজন নেই।</div>
             </div>
             <div class="chat-wrap" id="chat-area">
               <div class="chat-empty" id="chat-empty">
                 <span class="icon">🤖</span>
-                উপরে এজেন্ট সিলেক্ট করুন এবং<br>Gemini API Key দিন
+                উপরে এজেন্ট সিলেক্ট করুন এবং<br>আপনার কাজ লিখে পাঠান
               </div>
             </div>
             <div class="chat-input-row">
@@ -650,7 +650,7 @@ input::placeholder,textarea::placeholder{color:var(--text3);}
               <span class="share-link" id="share-link-text">—</span>
               <button class="btn btn-sm btn-primary" onclick="copyLink()">📋 কপি</button>
             </div>
-            <p class="helper">⚠️ লিংক ব্যবহারকারীকে নিজের Gemini API Key দিতে হবে।</p>
+            <p class="helper">⚡ এই লিংক ব্যবহারকারীর আলাদা Gemini API Key ছাড়াই server-side AI engine ব্যবহার করবে।</p>
           </div>
         </div>
 
@@ -914,9 +914,8 @@ function publishAgent(){
   const key=document.getElementById('api-key-build').value.trim();
   if(!name){toast('এজেন্টের নাম দিন!','error');return;}
   if(!prompt){toast('System Prompt লিখুন!','error');return;}
-  if(!key&&!cfg.key){toast('Gemini API Key দিন!','error');return;}
   const id='a'+Date.now();
-  agents.push({id,name,prompt,key:key||cfg.key,created:new Date().toISOString()});
+  agents.push({id,name,prompt,key:key||cfg.key||'',created:new Date().toISOString()});
   save();
   renderAgents();
   selectAgent(id);
@@ -982,7 +981,7 @@ async function sendMsg() {
   if (!activeId) { toast('আগে এজেন্ট সিলেক্ট করুন', 'error'); return; }
   
   const agent = agents.find(x => x.id === activeId);
-  const apiKey = document.getElementById('api-key-test').value.trim() || cfg.key || '';
+  const apiKey = document.getElementById('api-key-test')?.value.trim() || cfg.key || '';
   
   inp.value = '';
   rmEmpty();
