@@ -934,7 +934,8 @@ function selectAgent(id){
   localStorage.setItem('ah_active_agent', String(a.id));
   document.getElementById('active-badge').style.display='inline-flex';
   document.getElementById('active-name').textContent=a.name;
-  document.getElementById('api-key-test').value=a.key||cfg.key||'';
+  const testKey=document.getElementById('api-key-test');
+  if(testKey) testKey.value=a.key||cfg.key||'';
   history=[];
   clearChat();
   renderAgents();
