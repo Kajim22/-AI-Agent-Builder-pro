@@ -908,12 +908,43 @@ function renderAgents(){
   if(activeId) sel.value=activeId;
 }
 
-function publishAgent(){
+async function checkAgentCreationEntitlement(){
+  try{
+    const sb=window.akexaSupabase;
+    if(!sb?.auth?.getUser) return {allowed:true};
+    const {data:{user}}=await sb.auth.getUser();
+    if(!user) return {allowed:false,reason:'LOGIN_REQUIRED'};
+    const {data:admin}=await sb.from('platform_admins').select('user_id').eq('user_id',user.id).maybeSingle();
+    if(admin?.user_id) return {allowed:true,limit:null,used:null,admin:true};
+    const {data:ent}=await sb.from('platform_user_entitlements').select('plan_status,agent_limit,expires_at').eq('user_id',user.id).maybeSingle();
+    const activePaid=ent && ['paid','admin_granted'].includes(ent.plan_status) && (!ent.expires_at || new Date(ent.expires_at)>new Date());
+    const limit=activePaid ? Math.max(Number(ent.agent_limit||2),2) : 2;
+    const {count,error}=await sb.from('user_agents').select('id',{count:'exact',head:true}).eq('owner_user_id',user.id);
+    if(error) return {allowed:true,warning:error.message};
+    return {allowed:(count||0)<limit,limit,used:count||0,paid:activePaid};
+  }catch(e){
+    console.warn('[AKEXA] entitlement check failed:',e);
+    return {allowed:true,warning:e.message};
+  }
+}
+
+async function publishAgent(){
   const name=document.getElementById('agent-name').value.trim();
   const prompt=document.getElementById('system-prompt').value.trim();
   const key=document.getElementById('api-key-build').value.trim();
   if(!name){toast('এজেন্টের নাম দিন!','error');return;}
   if(!prompt){toast('System Prompt লিখুন!','error');return;}
+
+  const entitlement=await checkAgentCreationEntitlement();
+  if(entitlement.reason==='LOGIN_REQUIRED'){
+    toast('Agent তৈরি করতে আগে Login করুন','error');
+    return;
+  }
+  if(entitlement.allowed===false){
+    toast(`Free plan-এর 2টি Agent limit শেষ। আরও Agent-এর জন্য Paid Plan বা Admin permission প্রয়োজন।`,'error');
+    return;
+  }
+
   const id='a'+Date.now();
   agents.push({id,name,prompt,key:key||cfg.key||'',created:new Date().toISOString()});
   save();
@@ -922,7 +953,7 @@ function publishAgent(){
   document.getElementById('agent-name').value='';
   document.getElementById('system-prompt').value='';
   document.getElementById('api-key-build').value='';
-  toast(`✅ "${name}" সফলভাবে পাবলিশ হয়েছে!`,'success');
+  toast(`✅ "${name}" সফলভাবে তৈরি হয়েছে!`,'success');
   showSection('test');
 }
 
