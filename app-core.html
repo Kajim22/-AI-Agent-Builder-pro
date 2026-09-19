@@ -1036,6 +1036,7 @@ async function sendMsg() {
 async function connectTelegram(){
   if(!activeId){ toast('আগে একটা এজেন্ট সিলেক্ট করুন','error'); return; }
   const agent = agents.find(x => x.id === activeId);
+  if(!agent){ toast('Agent পাওয়া যায়নি','error'); return; }
   const botToken = prompt('BotFather থেকে পাওয়া Bot Token পেস্ট করুন:');
   if(!botToken) return;
 
@@ -1044,13 +1045,22 @@ async function connectTelegram(){
     const res = await fetch('https://kajim-ai-agent-backend.onrender.com/telegram/connect', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ botToken, systemPrompt: agent.prompt, agentId: agent.id })
+      body: JSON.stringify({
+        botToken: botToken.trim(),
+        systemPrompt: agent.prompt || agent.system_prompt || 'তুমি একজন সহকারী।',
+        agentId: agent.id,
+        marketplaceAgentId: agent.marketplaceAgentId || agent.marketplace_agent_id || ''
+      })
     });
     const data = await res.json();
     if(data.success){
       document.getElementById('c-tg').classList.add('connected');
       document.getElementById('s-tg').textContent = '✅ কানেক্টেড: ' + agent.name;
       toast('✅ Telegram Bot কানেক্ট হয়েছে!','success');
+    } else if(res.status===401){
+      toast('আগে Login করুন, তারপর Agent connect করুন।','error');
+    } else if(res.status===403){
+      toast('এই Agent-এর ব্যবহারাধিকার নেই। আগে Agentটি activate করুন।','error');
     } else {
       toast('এরর: '+(data.error||'অজানা সমস্যা'),'error');
     }
