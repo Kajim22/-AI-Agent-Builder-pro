@@ -666,24 +666,41 @@ input::placeholder,textarea::placeholder{color:var(--text3);}
           </div>
         </div>
       </div>
-<!-- ======= CONNECT ======= -->
+<!-- ======= CONNECT / SOCIAL CONNECTION CENTER ======= -->
       <div class="section" id="section-connect">
         <div class="card">
           <div class="card-header">
-            <div class="card-title">🔗 সোশ্যাল মিডিয়া ইন্টিগ্রেশন</div>
+            <div>
+              <div class="card-title">🔗 Social Media Connection Center</div>
+              <div class="helper" style="margin-top:4px;">এক জায়গা থেকে Agent ও Business Channel কানেক্ট ও ম্যানেজ করুন</div>
+            </div>
+            <span class="badge badge-purple">Secure</span>
           </div>
           <div class="card-body">
-            <p style="font-size:13px;color:var(--text2);margin-bottom:4px;">আপনার AI এজেন্টকে সোশ্যাল মিডিয়ায় কানেক্ট করুন:</p>
-            <div class="int-grid">
-              <div class="int-card" id="c-fb" onclick="connectFacebook()"><span class="int-icon">📘</span><div><div class="int-name">Facebook Page</div><div class="int-status" id="s-fb">কানেক্ট করুন</div></div></div>
-              <div class="int-card" id="c-ig" onclick="toggleConn('ig')"><span class="int-icon">📸</span><div><div class="int-name">Instagram</div><div class="int-status" id="s-ig">কানেক্ট করুন</div></div></div>
-              <div class="int-card" id="c-wa" onclick="toggleConn('wa')"><span class="int-icon">💬</span><div><div class="int-name">WhatsApp Business</div><div class="int-status" id="s-wa">কানেক্ট করুন</div></div></div>
-              <div class="int-card" id="c-tg" onclick="connectTelegram()"><span class="int-icon">✈️</span><div><div class="int-name">Telegram Bot</div><div class="int-status" id="s-tg">কানেক্ট করুন</div></div></div>
-              <div class="int-card" id="c-tw" onclick="toggleConn('tw')"><span class="int-icon">🐦</span><div><div class="int-name">Twitter / X</div><div class="int-status" id="s-tw">কানেক্ট করুন</div></div></div>
-              <div class="int-card" id="c-yt" onclick="toggleConn('yt')"><span class="int-icon">▶️</span><div><div class="int-name">YouTube Comments</div><div class="int-status" id="s-yt">কানেক্ট করুন</div></div></div>
+            <div class="field">
+              <label>কোন Agent-এর সাথে কানেক্ট করবেন?</label>
+              <select id="social-agent-select" onchange="refreshSocialConnections()" style="width:100%;padding:10px;">
+                <option value="">— Agent বেছে নিন —</option>
+              </select>
+              <div class="helper">শুধু আপনার নিজের Agent বা বৈধভাবে সক্রিয় করা Marketplace Agent এখানে ব্যবহার করা যাবে।</div>
             </div>
-            <div class="info-box" style="margin-top:4px;">
-              ℹ️ সোশ্যাল মিডিয়ায় পূর্ণ সংযোগের জন্য OAuth ব্যাকএন্ড প্রয়োজন। Webhook দিয়ে এখনই শুরু করতে পারেন।
+
+            <div id="social-connection-summary" style="display:none;margin:12px 0;padding:11px;border-radius:10px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);">
+              <div style="font-weight:800;">🤖 <span id="social-selected-agent-name">—</span></div>
+              <div id="social-connection-count" class="helper" style="margin-top:3px;">Connection status loading...</div>
+            </div>
+
+            <div class="int-grid">
+              <div class="int-card" id="c-fb" onclick="connectFacebook()"><span class="int-icon">📘</span><div><div class="int-name">Facebook Page</div><div class="int-status" id="s-fb">Not Connected</div></div></div>
+              <div class="int-card" id="c-messenger" onclick="connectFacebook()"><span class="int-icon">💬</span><div><div class="int-name">Facebook Messenger</div><div class="int-status" id="s-messenger">Uses Facebook Page</div></div></div>
+              <div class="int-card" id="c-tg" onclick="connectTelegram()"><span class="int-icon">✈️</span><div><div class="int-name">Telegram Bot</div><div class="int-status" id="s-tg">Not Connected</div></div></div>
+              <div class="int-card" id="c-ig" onclick="showSocialComingSoon('Instagram')"><span class="int-icon">📸</span><div><div class="int-name">Instagram</div><div class="int-status" id="s-ig">OAuth Setup Required</div></div></div>
+              <div class="int-card" id="c-wa" onclick="showSocialComingSoon('WhatsApp Business')"><span class="int-icon">🟢</span><div><div class="int-name">WhatsApp Business</div><div class="int-status" id="s-wa">OAuth Setup Required</div></div></div>
+              <div class="int-card" id="c-web" onclick="showSocialComingSoon('Website Chat')"><span class="int-icon">🌐</span><div><div class="int-name">Website Chat</div><div class="int-status" id="s-web">Coming Soon</div></div></div>
+            </div>
+
+            <div class="info-box" style="margin-top:12px;">
+              🔐 <strong>Access control:</strong> Connection requests are authenticated and checked against the selected Agent. Paid Marketplace Agents require valid access or Admin permission.
             </div>
           </div>
         </div>
@@ -1228,6 +1245,60 @@ function updateStats(){
         <button class="btn btn-ghost btn-sm" onclick="selectAgent('${a.id}');showSection('test')">টেস্ট করুন</button>
       </div>
     </div>`).join(''):'<p style="color:var(--text3);font-size:13px;">কোনো এজেন্ট নেই।</p>';
+}
+
+function populateSocialAgentSelect(){
+  const sel=document.getElementById('social-agent-select');
+  if(!sel) return;
+  const current=String(window.activeId||'');
+  const list=Array.isArray(window.agents)?window.agents:[];
+  sel.innerHTML='<option value="">— Agent বেছে নিন —</option>';
+  list.forEach(a=>{
+    const o=document.createElement('option'); o.value=String(a.id); o.textContent=a.name||a.id; sel.appendChild(o);
+  });
+  if(current && list.some(a=>String(a.id)===current)) sel.value=current;
+  refreshSocialConnections();
+}
+
+async function refreshSocialConnections(){
+  const sel=document.getElementById('social-agent-select');
+  const summary=document.getElementById('social-connection-summary');
+  const name=document.getElementById('social-selected-agent-name');
+  const count=document.getElementById('social-connection-count');
+  const agentId=sel?.value||window.activeId||'';
+  if(!agentId){
+    if(summary) summary.style.display='none';
+    return;
+  }
+  const agent=Array.isArray(window.agents)?window.agents.find(a=>String(a.id)===String(agentId)):null;
+  if(summary) summary.style.display='block';
+  if(name) name.textContent=agent?.name||'Selected Agent';
+  let facebook=0, telegram=0;
+  try{
+    const session=await window.akexaSupabase?.auth?.getSession?.();
+    const token=session?.data?.session?.access_token;
+    const headers=token?{Authorization:'Bearer '+token}:{};
+    const marketplaceAgentId=agent?.marketplaceAgentId||agent?.marketplace_agent_id||'';
+    const q=marketplaceAgentId?'?marketplaceAgentId='+encodeURIComponent(marketplaceAgentId):'';
+    const [fb,tg]=await Promise.all([
+      fetch('https://kajim-ai-agent-backend.onrender.com/facebook/pages/'+encodeURIComponent(agentId)+q,{headers}),
+      fetch('https://kajim-ai-agent-backend.onrender.com/telegram/bots/'+encodeURIComponent(agentId)+(q?'&':'?')+'marketplaceAgentId='+encodeURIComponent(marketplaceAgentId),{headers})
+    ]);
+    if(fb.ok){const d=await fb.json(); facebook=Array.isArray(d.pages)?d.pages.length:0;}
+    if(tg.ok){const d=await tg.json(); telegram=Array.isArray(d.bots)?d.bots.length:0;}
+  }catch(e){ console.warn('[AKEXA] social status:',e); }
+  const total=facebook+telegram;
+  if(count) count.textContent=total ? '🟢 '+total+'টি active connection' : '🟡 এখনো কোনো active connection নেই';
+  const fbStatus=document.getElementById('s-fb'); if(fbStatus) fbStatus.textContent=facebook?'🟢 '+facebook+'টি Page Connected':'Not Connected';
+  const tgStatus=document.getElementById('s-tg'); if(tgStatus) tgStatus.textContent=telegram?'🟢 '+telegram+'টি Bot Connected':'Not Connected';
+  const msgStatus=document.getElementById('s-messenger'); if(msgStatus) msgStatus.textContent=facebook?'🟢 Available via connected Page':'Connect a Facebook Page';
+  document.getElementById('c-fb')?.classList.toggle('connected',facebook>0);
+  document.getElementById('c-tg')?.classList.toggle('connected',telegram>0);
+  document.getElementById('c-messenger')?.classList.toggle('connected',facebook>0);
+}
+
+function showSocialComingSoon(channel){
+  toast(channel+' connection এখনো OAuth setup-এর অপেক্ষায় আছে। Facebook ও Telegram এখন ব্যবহার করা যাবে।','error');
 }
 
 function saveSettings(){
