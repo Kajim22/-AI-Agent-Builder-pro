@@ -507,6 +507,7 @@ input::placeholder,textarea::placeholder{color:var(--text3);}
     <nav class="sidebar-nav">
       <div class="nav-group-label">প্ল্যাটফর্ম</div>
       <div class="nav-item active" id="nav-build" onclick="showSection('build')"><span class="nav-icon">⚡</span> এজেন্ট তৈরি</div>
+      <div class="nav-item" id="nav-admin" style="display:none" onclick="showSection('admin')"><span class="nav-icon">🛡️</span> Admin Panel <span class="nav-badge">OWNER</span></div>
       <div class="nav-item" id="nav-test" onclick="showSection('test')"><span class="nav-icon">🧪</span> টেস্ট সেন্টার</div>
       <div class="nav-item" id="nav-connect" onclick="showSection('connect')"><span class="nav-icon">🔗</span> ইন্টিগ্রেশন</div>
       <div class="nav-item" id="nav-knowledge" onclick="showSection('knowledge')"><span class="nav-icon">📚</span> Knowledge Base</div>
@@ -667,6 +668,18 @@ input::placeholder,textarea::placeholder{color:var(--text3);}
         </div>
       </div>
 <!-- ======= CONNECT / SOCIAL CONNECTION CENTER ======= -->
+      <div class="section" id="section-admin">
+        <div class="card"><div class="card-header"><div><div class="card-title">🛡️ Master Admin Panel</div><div class="helper">Paid Marketplace Agent access control</div></div><span class="badge badge-purple">OWNER ONLY</span></div>
+        <div class="card-body">
+          <div class="info-box">শুধু Platform Admin এখান থেকে নির্দিষ্ট user-কে নির্দিষ্ট Paid Agent-এর access দিতে বা revoke করতে পারবেন।</div>
+          <div class="field"><label>Buyer User ID</label><input id="admin-buyer-id" placeholder="Supabase User UUID"></div>
+          <div class="field"><label>Marketplace Agent ID</label><input id="admin-marketplace-agent-id" placeholder="Marketplace Agent UUID"></div>
+          <div class="field"><label>Access Expiry (ঐচ্ছিক)</label><input id="admin-access-expires" type="datetime-local"></div>
+          <div class="btn-group"><button class="btn btn-primary" onclick="adminGrantAgentAccess()">🔓 Grant Access</button><button class="btn btn-ghost" onclick="loadAdminAccess()">🔄 Refresh</button></div>
+          <div id="admin-access-list"><p class="helper">Access list লোড হচ্ছে না—Refresh চাপুন।</p></div>
+        </div></div>
+      </div>
+
       <div class="section" id="section-connect">
         <div class="card">
           <div class="card-header">
@@ -866,12 +879,13 @@ function showSection(n){
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
   document.getElementById('section-'+n).classList.add('active');
   document.getElementById('nav-'+n).classList.add('active');
-  const t={build:'⚡ এজেন্ট তৈরি করুন',test:'🧪 টেস্ট সেন্টার',connect:'🔗 ইন্টিগ্রেশন',knowledge:'📚 Knowledge Base',orders:'🛒 অর্ডারসমূহ',analytics:'📊 অ্যানালিটিক্স',settings:'⚙️ সেটিংস'};
+  const t={build:'⚡ এজেন্ট তৈরি করুন',test:'🧪 টেস্ট সেন্টার',connect:'🔗 ইন্টিগ্রেশন',knowledge:'📚 Knowledge Base',orders:'🛒 অর্ডারসমূহ',analytics:'📊 অ্যানালিটিক্স',settings:'⚙️ সেটিংস',admin:'🛡️ Master Admin Panel'};
   document.getElementById('page-title').textContent = t[n]||'';
   if(n==='analytics') updateStats();
   if(n==='knowledge') populateKnowledgeAgentSelect();
   if(n==='orders') loadOrders();
   if(n==='connect') populateSocialAgentSelect();
+  if(n==='admin') loadAdminAccess();
   closeSidebar();
 }
 
@@ -1248,6 +1262,12 @@ function updateStats(){
     </div>`).join(''):'<p style="color:var(--text3);font-size:13px;">কোনো এজেন্ট নেই।</p>';
 }
 
+async function getAdminAuthHeaders(){const s=await window.akexaSupabase?.auth?.getSession?.();const token=s?.data?.session?.access_token;return token?{Authorization:'Bearer '+token}:{};}
+async function showAdminIfAuthorized(){try{const h=await getAdminAuthHeaders();if(!h.Authorization)return;const r=await fetch('https://kajim-ai-agent-backend.onrender.com/admin/marketplace/access',{headers:h});const n=document.getElementById('nav-admin');if(n)n.style.display=r.ok?'flex':'none';}catch(e){}}
+async function adminGrantAgentAccess(){const buyerUserId=document.getElementById('admin-buyer-id').value.trim(),marketplaceAgentId=document.getElementById('admin-marketplace-agent-id').value.trim(),raw=document.getElementById('admin-access-expires').value;if(!buyerUserId||!marketplaceAgentId){toast('Buyer User ID এবং Marketplace Agent ID দিন','error');return;}const r=await fetch('https://kajim-ai-agent-backend.onrender.com/admin/marketplace/access/grant',{method:'POST',headers:{'Content-Type':'application/json',...(await getAdminAuthHeaders())},body:JSON.stringify({buyerUserId,marketplaceAgentId,expiresAt:raw?new Date(raw).toISOString():null})});const d=await r.json();if(r.ok&&d.success){toast('✅ Access granted','success');loadAdminAccess();}else toast('এরর: '+(d.error||'Grant failed'),'error');}
+async function loadAdminAccess(){const el=document.getElementById('admin-access-list');if(!el)return;const r=await fetch('https://kajim-ai-agent-backend.onrender.com/admin/marketplace/access',{headers:await getAdminAuthHeaders()});const d=await r.json();if(!r.ok){el.innerHTML='<p style="color:var(--red)">Admin access required</p>';return;}const rows=d.access||[];el.innerHTML=rows.length?rows.map(x=>'<div class="agent-row"><div><b>'+String(x.agent_name||x.marketplace_agent_id)+'</b><div class="helper">User: '+x.buyer_user_id+' · Status: '+x.status+' · Source: '+(x.access_source||'payment')+(x.access_expires_at?' · Expires: '+new Date(x.access_expires_at).toLocaleString():'')+'</div></div>'+(x.access_source==='admin_grant'?'<button class="btn btn-danger btn-sm" onclick="adminRevokeAccess(\''+x.id+'\')">Revoke</button>':'')+'</div>').join(''):'<p class="helper">কোনো access record নেই।</p>';}
+async function adminRevokeAccess(subscriptionId){if(!confirm('এই access revoke করবেন?'))return;const r=await fetch('https://kajim-ai-agent-backend.onrender.com/admin/marketplace/access/revoke',{method:'POST',headers:{'Content-Type':'application/json',...(await getAdminAuthHeaders())},body:JSON.stringify({subscriptionId})});const d=await r.json();if(r.ok&&d.success){toast('✅ Access revoked','success');loadAdminAccess();}else toast('এরর: '+(d.error||'Revoke failed'),'error');}
+document.addEventListener('DOMContentLoaded',showAdminIfAuthorized);
 function populateSocialAgentSelect(){
   const sel=document.getElementById('social-agent-select');
   if(!sel) return;
