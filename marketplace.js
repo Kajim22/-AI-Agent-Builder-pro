@@ -56,7 +56,13 @@
     if(!user){showAuth(win,doc,id);return;}
     const {data:sessionData}=await client.auth.getSession();const token=sessionData?.session?.access_token;if(!token){alert('Login session পাওয়া যায়নি। আবার Login করুন।');return;}
     const btn=doc.getElementById('akexa-buy-btn');if(btn){btn.disabled=true;btn.textContent='Creating subscription...';}
-    try{const res=await fetch(FUNCTION_URL,{method:'POST',headers:{Authorization:'Bearer '+token,'apikey':SUPABASE_KEY,'Content-Type':'application/json'},body:JSON.stringify({marketplace_agent_id:id})});const data=await res.json();if(!res.ok)throw new Error(data.error||'Subscription request failed');alert('Subscription request created.\nStatus: '+(data.subscription?.status||'pending')+'\nPayment gateway will be connected next.');render(win,doc);}catch(e){alert('Subscription failed: '+e.message);}finally{if(btn){btn.disabled=false;btn.textContent='Get Agent';}}
+    try{const res=await fetch(FUNCTION_URL,{method:'POST',headers:{Authorization:'Bearer '+token,'apikey':SUPABASE_KEY,'Content-Type':'application/json'},body:JSON.stringify({marketplace_agent_id:id})});const data=await res.json();if(!res.ok)throw new Error(data.error||'Subscription request failed');const status=data.subscription?.status||'pending';
+      if(status==='active'||status==='free'||status==='admin_granted'){
+        alert('✅ Agent access activated.\nStatus: '+status);
+      }else{
+        alert('Subscription created, but payment is still required.\nStatus: '+status+'\n\nAgent access will remain locked until a verified payment activates the subscription.');
+      }
+      render(win,doc);}catch(e){alert('Subscription failed: '+e.message);}finally{if(btn){btn.disabled=false;btn.textContent='Get Agent';}}
   }
   function showAuth(win,doc,agentId){
     const old=doc.getElementById('akexa-auth-overlay');if(old)old.remove();const overlay=doc.createElement('div');overlay.id='akexa-auth-overlay';overlay.className='akexa-bazar-overlay open';overlay.innerHTML=`<div class="akexa-bazar"><div class="akexa-bazar-head"><div><h2>Login to ${BRAND}</h2><p>Account required to subscribe to an agent.</p></div><button class="akexa-bazar-close" id="akexa-auth-close">Close</button></div><div class="akexa-bazar-body"><div class="akexa-auth"><input id="akexa-email" type="email" placeholder="Email"><input id="akexa-password" type="password" placeholder="Password"><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-primary btn-sm" id="akexa-login">Login</button><button class="btn btn-ghost btn-sm" id="akexa-signup">Create account</button></div><div id="akexa-auth-msg" class="akexa-msg"></div></div></div></div>`;doc.body.appendChild(overlay);
