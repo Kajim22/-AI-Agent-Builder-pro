@@ -861,7 +861,9 @@ function showSection(n){
   const listDiv = document.getElementById('orders-list');
   listDiv.innerHTML = '<p style="color:var(--text3);font-size:12px;">লোড হচ্ছে...</p>';
   try{
-    const res = await fetch('https://kajim-ai-agent-backend.onrender.com/orders/list');
+    const session = await window.akexaSupabase?.auth?.getSession?.();
+    const authHeaders = session?.data?.session?.access_token ? {Authorization:'Bearer '+session.data.session.access_token} : {};
+    const res = await fetch('https://kajim-ai-agent-backend.onrender.com/orders/list',{headers:authHeaders});
     const rows = await res.json();
     if(!Array.isArray(rows) || rows.length===0){
       listDiv.innerHTML = '<p style="color:var(--text3);font-size:13px;">এখনো কোনো অর্ডার আসেনি।</p>';
@@ -1275,7 +1277,9 @@ async function loadKnowledge(){
 
   listDiv.innerHTML = '<p style="color:var(--text3);font-size:12px;">লোড হচ্ছে...</p>';
   try{
-    const res = await fetch(`https://kajim-ai-agent-backend.onrender.com/knowledge/list/${agentId}`);
+    const session = await window.akexaSupabase?.auth?.getSession?.();
+    const authHeaders = session?.data?.session?.access_token ? {Authorization:'Bearer '+session.data.session.access_token} : {};
+    const res = await fetch(`https://kajim-ai-agent-backend.onrender.com/knowledge/list/${agentId}`, {headers:authHeaders});
     const rows = await res.json();
     if(!Array.isArray(rows) || rows.length===0){
       listDiv.innerHTML = '<p style="color:var(--text3);font-size:12px;">এখনো কোনো তথ্য যোগ করা হয়নি।</p>';
@@ -1302,7 +1306,7 @@ async function addKnowledge(){
   try{
     const res = await fetch('https://kajim-ai-agent-backend.onrender.com/knowledge/add', {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json', ...((await window.akexaSupabase?.auth?.getSession?.())?.data?.session?.access_token ? {Authorization:'Bearer '+(await window.akexaSupabase.auth.getSession()).data.session.access_token} : {})},
       body: JSON.stringify({ agentId, content })
     });
     const data = await res.json();
@@ -1323,7 +1327,7 @@ async function deleteKnowledge(id){
   try{
     const res = await fetch('https://kajim-ai-agent-backend.onrender.com/knowledge/delete', {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json', ...((await window.akexaSupabase?.auth?.getSession?.())?.data?.session?.access_token ? {Authorization:'Bearer '+(await window.akexaSupabase.auth.getSession()).data.session.access_token} : {})},
       body: JSON.stringify({ id })
     });
     const data = await res.json();
