@@ -6,7 +6,7 @@
   const SUPABASE_URL='https://yhspipyrgdcdfqqxxges.supabase.co';
   const SUPABASE_KEY='sb_publishable_IcyDHTLjyPPspvcgnYZZiw_q1lUn8QW';
   const SUPABASE_SDK='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js';
-  const FUNCTION_URL=SUPABASE_URL+'/functions/v1/create-marketplace-subscription';
+  const FUNCTION_URL=SUPABASE_URL+'/functions/v1/marketplace-subscription-v2';
   let sb=null,ready=null,currentWin=null,currentDoc=null;
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#039;');
   const getLocalAgents = () => {
