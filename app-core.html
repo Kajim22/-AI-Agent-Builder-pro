@@ -1153,7 +1153,7 @@ async function connectFacebook(){
     const res = await fetch('https://kajim-ai-agent-backend.onrender.com/facebook/connect', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ pageId, pageAccessToken, systemPrompt: agent.prompt, agentId: agent.id })
+      body: JSON.stringify({ pageId, pageAccessToken, systemPrompt: agent.prompt, agentId: agent.id, marketplaceAgentId: agent.marketplaceAgentId || agent.marketplace_agent_id || '' })
     });
     const data = await res.json();
     if(data.success){
