@@ -261,7 +261,7 @@
   function getAgentId() {
     // Prefer the active agent exposed by the app, then fall back to the
     // persisted selection so Social Connect still works after reload.
-    return String(window.activeId || localStorage.getItem('ah_active_agent') || '');
+    const selected = document.getElementById('social-agent-select')?.value || ''; return String(selected || window.activeId || localStorage.getItem('ah_active_agent') || '');
   }
 
   async function api(path, options = {}) {
