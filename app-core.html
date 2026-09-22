@@ -1099,8 +1099,10 @@ async function sendMsg() {
 }
 
 async function connectTelegram(){
-  if(!activeId){ toast('আগে একটা এজেন্ট সিলেক্ট করুন','error'); return; }
-  const agent = agents.find(x => x.id === activeId);
+  const socialAgentId = document.getElementById('social-agent-select')?.value || '';
+  const selectedAgentId = socialAgentId || activeId;
+  if(!selectedAgentId){ toast('আগে একটা এজেন্ট সিলেক্ট করুন','error'); return; }
+  const agent = agents.find(x => String(x.id) === String(selectedAgentId));
   if(!agent){ toast('Agent পাওয়া যায়নি','error'); return; }
   const botToken = prompt('BotFather থেকে পাওয়া Bot Token পেস্ট করুন:');
   if(!botToken) return;
@@ -1134,8 +1136,11 @@ async function connectTelegram(){
   }
 }
 async function connectFacebook(){
-  if(!activeId){ toast('আগে একটা এজেন্ট সিলেক্ট করুন','error'); return; }
-  const agent = agents.find(x => x.id === activeId);
+  const socialAgentId = document.getElementById('social-agent-select')?.value || '';
+  const selectedAgentId = socialAgentId || activeId;
+  if(!selectedAgentId){ toast('আগে একটা এজেন্ট সিলেক্ট করুন','error'); return; }
+  const agent = agents.find(x => String(x.id) === String(selectedAgentId));
+  if(!agent){ toast('Agent পাওয়া যায়নি','error'); return; }
 
   const pageId = prompt('আপনার Facebook Page ID দিন:');
   if(!pageId) return;
