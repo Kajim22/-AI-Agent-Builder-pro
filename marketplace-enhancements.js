@@ -258,7 +258,11 @@
   const API = 'https://kajim-ai-agent-backend.onrender.com';
 
   function getDoc() { return document; }
-  function getAgentId() { return window.activeId || ''; }
+  function getAgentId() {
+    // Prefer the active agent exposed by the app, then fall back to the
+    // persisted selection so Social Connect still works after reload.
+    return String(window.activeId || localStorage.getItem('ah_active_agent') || '');
+  }
 
   async function api(path, options = {}) {
     const headers = new Headers(options.headers || {});
