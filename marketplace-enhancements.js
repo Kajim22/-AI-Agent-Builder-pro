@@ -308,14 +308,32 @@
           pages.map(p => `<div data-fb-page="${String(p.page_id).replace(/"/g,'&quot;')}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--border,#2a2a40)"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📘 Page: ${String(p.page_id).replace(/</g,'&lt;')}</span><span style="color:#79e2a4;font-size:10px;font-weight:700">CONNECTED</span><button type="button" data-fb-disconnect="${p.page_id}" style="border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#ff8a8a;border-radius:6px;padding:4px 7px;font-size:10px;cursor:pointer">Disconnect</button></div>`).join('') +
           '<button type="button" id="akexa-fb-connect-more" class="btn btn-sm btn-ghost" style="margin-top:8px;width:100%">＋ Connect another Page</button>'
         : `<div style="padding:8px;border-radius:8px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);color:var(--text2,#9090b0)"><div style="font-weight:700;color:#fbbf24">🟡 Facebook: Not Connected</div><div style="margin-top:3px">Agent: ${String(currentAgentName).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div></div><button type="button" id="akexa-fb-connect-more" class="btn btn-sm btn-ghost" style="margin-top:8px;width:100%">＋ Connect Page</button>`;
-      panel.querySelectorAll('[data-fb-disconnect]').forEach(btn => btn.onclick = async e => {
-        e.preventDefault(); e.stopPropagation();
-        if (!confirm('এই Facebook Page disconnect করবেন?')) return;
-        const pageId = btn.getAttribute('data-fb-disconnect');
-        const response = await api('/facebook/disconnect', { method:'POST', body: JSON.stringify({ pageId, agentId }) });
-        const result = await response.json();
-        if (!result.success) { alert(result.error || 'Disconnect failed'); return; }
-        await refreshPages();
+      panel.querySelectorAll('[data-fb-disconnect]').forEach(btn => {
+        btn.onclick = async e => {
+          e.preventDefault(); e.stopPropagation();
+          if (btn.disabled || !confirm('এই Facebook Page disconnect করবেন?')) return;
+          const pageId = btn.getAttribute('data-fb-disconnect');
+          btn.disabled = true;
+          btn.textContent = 'Disconnecting…';
+          try {
+            const response = await api('/facebook/disconnect', {
+              method: 'POST',
+              body: JSON.stringify({ pageId, agentId })
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || !result.success) {
+              throw new Error(result.error || ('Disconnect failed (' + response.status + ')'));
+            }
+            if (typeof window.toast === 'function') window.toast('Facebook Page disconnect হয়েছে।', 'success');
+            await refreshPages();
+          } catch (error) {
+            btn.disabled = false;
+            btn.textContent = 'Disconnect';
+            const message = error.message || String(error);
+            if (typeof window.toast === 'function') window.toast('Disconnect failed: ' + message, 'error');
+            else alert('Disconnect failed: ' + message);
+          }
+        };
       });
       const more = panel.querySelector('#akexa-fb-connect-more');
       if (more) more.onclick = e => { e.preventDefault(); e.stopPropagation(); window.connectFacebook(); };
