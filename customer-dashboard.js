@@ -25,8 +25,7 @@
       <div class="card-body" style="padding-top:10px"><div id="customer-list"><p style="color:var(--text3);font-size:12px">একজন Agent নির্বাচন করুন।</p></div></div></div>`;
     main.appendChild(section);
     const sel=document.getElementById('customer-agent-select');
-    (window.agents||[]).forEach(a=>{const o=document.createElement('option');o.value=a.id;o.textContent=a.name;sel.appendChild(o);});
-    if(window.activeId) sel.value=window.activeId;
+    syncAgents();
     sel.addEventListener('change',load);
     document.getElementById('customer-search').addEventListener('input',render);
     return true;
@@ -34,13 +33,34 @@
 
   function show(){
     if(!mount()) return;
-    if(typeof window.showSection==='function') window.showSection('customers');
+    // Call the original section switcher; calling the wrapped window.showSection
+    // here caused infinite recursion for the "customers" section.
+    if(typeof oldShow==='function') oldShow.call(window,'customers');
     document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
     document.getElementById('nav-customers')?.classList.add('active');
+    syncAgents();
     load();
+  }
+  function syncAgents(){
+    const sel=document.getElementById('customer-agent-select');
+    if(!sel) return;
+    const current=sel.value||window.activeId||'';
+    const agents=Array.isArray(window.agents)?window.agents:[];
+    const signature=agents.map(a=>String(a.id)).join('|');
+    if(sel.dataset.agentSignature!==signature){
+      sel.innerHTML='';
+      agents.forEach(a=>{
+        const o=document.createElement('option');
+        o.value=String(a.id);o.textContent=a.name||a.id;sel.appendChild(o);
+      });
+      sel.dataset.agentSignature=signature;
+    }
+    if(current && agents.some(a=>String(a.id)===String(current))) sel.value=String(current);
+    else if(window.activeId) sel.value=String(window.activeId);
   }
 
   async function load(){
+    syncAgents();
     const aid=document.getElementById('customer-agent-select')?.value||window.activeId||'';
     const list=document.getElementById('customer-list'); if(!aid||!list)return;
     list.innerHTML='<p style="color:var(--text3);font-size:12px">লোড হচ্ছে...</p>';
