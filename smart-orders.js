@@ -133,9 +133,10 @@
     const rows=orders.filter(o=>(f==='all'||String(o.status||'new')===f)&&(!q||[o.customer_name,o.customer_phone,o.customer_address,o.order_details,o.chat_id].some(v=>String(v||'').toLowerCase().includes(q))));
     const list=document.getElementById('smart-order-list');if(!list)return;
     if(!rows.length){list.innerHTML='<p style="color:var(--text3);font-size:12px;padding:10px 0">কোনো Order পাওয়া যায়নি।</p>';return;}
-    list.innerHTML=rows.map(o=>{const st=String(o.status||'new');return `<div class="agent-row" style="display:block;margin-bottom:10px;padding:14px"><div style="display:flex;justify-content:space-between;gap:10px"><div style="flex:1"><div style="font-weight:700;font-size:13px">#${esc(o.id)} · ${esc(o.customer_name||'নাম নেই')}</div><div style="font-size:11px;color:var(--text3);margin-top:4px">${esc(o.customer_phone||'ফোন নেই')} · ${esc(o.chat_id||'')}</div><div style="font-size:12px;color:var(--text2);margin-top:8px;line-height:1.6">${esc(o.order_details||'Order details নেই')}<br>${o.customer_address?`📍 ${esc(o.customer_address)}`:''}</div></div><select class="order-status" data-id="${esc(o.id)}"><option value="new">New</option><option value="confirmed">Confirmed</option><option value="processing">Processing</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></div></div>`}).join('');
-    rows.forEach(o=>{const x=list.querySelector(`.order-status[data-id="${CSS.escape(String(o.id))}"]`);if(x)x.value=stSafe(o.status);});
+    list.innerHTML=rows.map(o=>{const st=String(o.status||'new');return `<div class="agent-row" style="display:block;margin-bottom:10px;padding:14px"><div style="display:flex;justify-content:space-between;gap:10px"><div style="flex:1"><div style="font-weight:700;font-size:13px">#${esc(o.id)} · ${esc(o.customer_name||'নাম নেই')}</div><div style="font-size:11px;color:var(--text3);margin-top:4px">${esc(o.customer_phone||'ফোন নেই')} · ${esc(o.chat_id||'')}</div><div style="font-size:12px;color:var(--text2);margin-top:8px;line-height:1.6">${esc(o.order_details||'Order details নেই')}<br>${o.customer_address?`📍 ${esc(o.customer_address)}`:''}</div></div><select class="order-status" data-id="${esc(o.id)}"><option value="new">New</option><option value="confirmed">Confirmed</option><option value="processing">Processing</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select><div style="font-size:10px;margin-top:8px;color:var(--text3)">Delivery Status</div><select class="delivery-status" data-id="${esc(o.id)}"><option value="pending">Pending</option><option value="shipped">Shipped</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></div></div>`}).join('');
+    rows.forEach(o=>{const ds=list.querySelector('.delivery-status[data-id="'+CSS.escape(String(o.id))+'"]');if(ds)ds.value=['pending','shipped','delivered','cancelled'].includes(String(o.delivery_status||'pending'))?String(o.delivery_status||'pending'):'pending';const x=list.querySelector(`.order-status[data-id="${CSS.escape(String(o.id))}"]`);if(x)x.value=stSafe(o.status);});
     list.querySelectorAll('.order-status').forEach(x=>x.addEventListener('change',()=>updateStatus(x)));
+    list.querySelectorAll('.delivery-status').forEach(x=>x.addEventListener('change',()=>updateDeliveryStatus(x)));
   }
 
   function stSafe(v){return statuses.includes(String(v||''))?String(v):'new';}
@@ -151,6 +152,18 @@
       render();load();
     }catch(e){alert('Status update করা যায়নি: '+e.message);load();}
     finally{sel.disabled=false;}
+  }
+
+  async function updateDeliveryStatus(sel){
+    const id=Number(sel.dataset.id),status=sel.value;sel.disabled=true;
+    try{
+      const session=(await window.akexaSupabase.auth.getSession()).data.session;
+      if(!session||!session.access_token)throw Error('আবার Login করুন');
+      const r=await fetch(API+'/orders/'+encodeURIComponent(id)+'/delivery-status',{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},body:JSON.stringify({status,platform:'facebook'})});
+      const d=await r.json();if(!r.ok||!d.success)throw Error(d.error||'Update failed');
+      const o=orders.find(x=>Number(x.id)===id);if(o)o.delivery_status=status;
+      alert('Delivery Status আপডেট হয়েছে: '+status);
+    }catch(e){alert('Delivery Status update করা যায়নি: '+e.message);load();}finally{sel.disabled=false;}
   }
 
   function show(){
