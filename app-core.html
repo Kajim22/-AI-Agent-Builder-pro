@@ -712,6 +712,8 @@ input::placeholder,textarea::placeholder{color:var(--text3);}
               <div class="int-card" id="c-web" onclick="showSocialComingSoon('Website Chat')"><span class="int-icon">🌐</span><div><div class="int-name">Website Chat</div><div class="int-status" id="s-web">Coming Soon</div></div></div>
             </div>
 
+            <div id="facebook-connected-pages" style="margin-top:12px;"></div>
+
             <div class="info-box" style="margin-top:12px;">
               🔐 <strong>Access control:</strong> Connection requests are authenticated and checked against the selected Agent. Paid Marketplace Agents require valid access or Admin permission.
             </div>
@@ -1162,6 +1164,7 @@ async function connectFacebook(){
       document.getElementById('c-fb').classList.add('connected');
       document.getElementById('s-fb').textContent = '✅ কানেক্টেড: ' + agent.name;
       toast('✅ Facebook Page কানেক্ট হয়েছে!','success');
+      await refreshSocialConnections();
     } else {
       toast('এরর: '+(data.error||'অজানা সমস্যা'),'error');
     }
@@ -1301,7 +1304,7 @@ async function refreshSocialConnections(){
   const agent=Array.isArray(window.agents)?window.agents.find(a=>String(a.id)===String(agentId)):null;
   if(summary) summary.style.display='block';
   if(name) name.textContent=agent?.name||'Selected Agent';
-  let facebook=0, telegram=0;
+  let facebook=0, telegram=0, facebookPages=[];
   try{
     const session=await window.akexaSupabase?.auth?.getSession?.();
     const token=session?.data?.session?.access_token;
@@ -1312,7 +1315,7 @@ async function refreshSocialConnections(){
       fetch('https://kajim-ai-agent-backend.onrender.com/facebook/pages/'+encodeURIComponent(agentId)+q,{headers}),
       fetch('https://kajim-ai-agent-backend.onrender.com/telegram/bots/'+encodeURIComponent(agentId)+(q?'&':'?')+'marketplaceAgentId='+encodeURIComponent(marketplaceAgentId),{headers})
     ]);
-    if(fb.ok){const d=await fb.json(); facebook=Array.isArray(d.pages)?d.pages.length:0;}
+    if(fb.ok){const d=await fb.json(); facebookPages=Array.isArray(d.pages)?d.pages:[]; facebook=facebookPages.length;}
     if(tg.ok){const d=await tg.json(); telegram=Array.isArray(d.bots)?d.bots.length:0;}
   }catch(e){ console.warn('[AKEXA] social status:',e); }
   const total=facebook+telegram;
@@ -1323,6 +1326,36 @@ async function refreshSocialConnections(){
   document.getElementById('c-fb')?.classList.toggle('connected',facebook>0);
   document.getElementById('c-tg')?.classList.toggle('connected',telegram>0);
   document.getElementById('c-messenger')?.classList.toggle('connected',facebook>0);
+  const pageBox=document.getElementById('facebook-connected-pages');
+  if(pageBox){
+    pageBox.replaceChildren();
+    const heading=document.createElement('div'); heading.textContent='Connected Facebook Pages'; heading.style.cssText='font-weight:800;margin:8px 0;color:var(--text)'; pageBox.appendChild(heading);
+    if(!facebookPages.length){const empty=document.createElement('div');empty.textContent='এই Agent-এর সাথে কোনো Facebook Page যুক্ত নেই।';empty.className='helper';pageBox.appendChild(empty);}
+    facebookPages.forEach(page=>{
+      const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;margin:7px 0;border:1px solid var(--border);border-radius:10px';
+      const label=document.createElement('span');label.textContent='📘 Page ID: '+String(page.page_id||'');label.style.cssText='font-size:12px;overflow-wrap:anywhere';
+      const btn=document.createElement('button');btn.type='button';btn.textContent='Disconnect';btn.className='btn btn-danger';btn.style.cssText='flex-shrink:0';btn.addEventListener('click',()=>disconnectFacebookPage(String(page.page_id||''),agentId));
+      row.append(label,btn);pageBox.appendChild(row);
+    });
+  }
+}
+
+async function disconnectFacebookPage(pageId,agentId){
+  if(!pageId||!agentId)return;
+  if(!confirm('এই Facebook Page-টি Agent থেকে Disconnect করবেন?'))return;
+  try{
+    const session=await window.akexaSupabase?.auth?.getSession?.();
+    const token=session?.data?.session?.access_token;
+    if(!token){toast('Login session পাওয়া যায়নি। আবার Login করুন।','error');return;}
+    const res=await fetch('https://kajim-ai-agent-backend.onrender.com/facebook/disconnect',{
+      method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+      body:JSON.stringify({pageId,agentId})
+    });
+    const data=await res.json();
+    if(!res.ok||!data.success||!data.disconnected){toast(data.error||'Page disconnect করা যায়নি।','error');return;}
+    toast('Facebook Page সফলভাবে Disconnect হয়েছে।','success');
+    await refreshSocialConnections();
+  }catch(err){toast('Disconnect error: '+err.message,'error');}
 }
 
 function showSocialComingSoon(channel){
