@@ -1273,7 +1273,24 @@ function updateStats(){
 }
 
 async function getAdminAuthHeaders(){const s=await window.akexaSupabase?.auth?.getSession?.();const token=s?.data?.session?.access_token;return token?{Authorization:'Bearer '+token}:{};}
-async function showAdminIfAuthorized(){try{const h=await getAdminAuthHeaders();if(!h.Authorization)return;const r=await fetch('https://kajim-ai-agent-backend.onrender.com/admin/marketplace/access',{headers:h});const n=document.getElementById('nav-admin');if(n)n.style.display=r.ok?'flex':'none';}catch(e){}}
+window.refreshAdminAccessState=showAdminIfAuthorized;
+let adminAccessCheckId=0;
+async function showAdminIfAuthorized(){
+  const checkId=++adminAccessCheckId;
+  const nav=document.getElementById('nav-admin');
+  try{
+    const headers=await getAdminAuthHeaders();
+    if(checkId!==adminAccessCheckId)return;
+    if(!headers.Authorization){if(nav)nav.style.display='none';return;}
+    const response=await fetch('https://kajim-ai-agent-backend.onrender.com/admin/marketplace/access',{headers,cache:'no-store'});
+    if(checkId!==adminAccessCheckId)return;
+    if(response.ok){if(nav)nav.style.display='flex';return;}
+    if(response.status===401||response.status===403){if(nav)nav.style.display='none';return;}
+    console.warn('[AKEXA ADMIN] Permission check temporarily unavailable:',response.status);
+  }catch(error){
+    console.warn('[AKEXA ADMIN] Permission check failed; keeping last confirmed visibility:',error);
+  }
+}
 async function adminGrantAgentAccess(){const buyerUserId=document.getElementById('admin-buyer-id').value.trim(),marketplaceAgentId=document.getElementById('admin-marketplace-agent-id').value.trim(),raw=document.getElementById('admin-access-expires').value;if(!buyerUserId||!marketplaceAgentId){toast('Buyer User ID এবং Marketplace Agent ID দিন','error');return;}const r=await fetch('https://kajim-ai-agent-backend.onrender.com/admin/marketplace/access/grant',{method:'POST',headers:{'Content-Type':'application/json',...(await getAdminAuthHeaders())},body:JSON.stringify({buyerUserId,marketplaceAgentId,expiresAt:raw?new Date(raw).toISOString():null})});const d=await r.json();if(r.ok&&d.success){toast('✅ Access granted','success');loadAdminAccess();}else toast('এরর: '+(d.error||'Grant failed'),'error');}
 async function loadAdminAccess(){const el=document.getElementById('admin-access-list');if(!el)return;const r=await fetch('https://kajim-ai-agent-backend.onrender.com/admin/marketplace/access',{headers:await getAdminAuthHeaders()});const d=await r.json();if(!r.ok){el.innerHTML='<p style="color:var(--red)">Admin access required</p>';return;}const rows=d.access||[];el.innerHTML=rows.length?rows.map(x=>'<div class="agent-row"><div><b>'+String(x.agent_name||x.marketplace_agent_id)+'</b><div class="helper">User: '+x.buyer_user_id+' · Status: '+x.status+' · Source: '+(x.access_source||'payment')+(x.access_expires_at?' · Expires: '+new Date(x.access_expires_at).toLocaleString():'')+'</div></div>'+(x.access_source==='admin_grant'?'<button class="btn btn-danger btn-sm" onclick="adminRevokeAccess(\''+x.id+'\')">Revoke</button>':'')+'</div>').join(''):'<p class="helper">কোনো access record নেই।</p>';}
 async function adminRevokeAccess(subscriptionId){if(!confirm('এই access revoke করবেন?'))return;const r=await fetch('https://kajim-ai-agent-backend.onrender.com/admin/marketplace/access/revoke',{method:'POST',headers:{'Content-Type':'application/json',...(await getAdminAuthHeaders())},body:JSON.stringify({subscriptionId})});const d=await r.json();if(r.ok&&d.success){toast('✅ Access revoked','success');loadAdminAccess();}else toast('এরর: '+(d.error||'Revoke failed'),'error');}
