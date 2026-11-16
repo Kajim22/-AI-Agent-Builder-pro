@@ -511,6 +511,7 @@ input::placeholder,textarea::placeholder{color:var(--text3);}
       <div class="nav-item" id="nav-test" onclick="showSection('test')"><span class="nav-icon">🧪</span> টেস্ট সেন্টার</div>
       <div class="nav-item" id="nav-connect" onclick="showSection('connect')"><span class="nav-icon">🔗</span> ইন্টিগ্রেশন</div>
       <div class="nav-item" id="nav-knowledge" onclick="showSection('knowledge')"><span class="nav-icon">📚</span> Knowledge Base</div>
+      <div class="nav-item" id="nav-conversations" onclick="showSection('conversations')"><span class="nav-icon">💬</span> Inbox</div>
       <div class="nav-item" id="nav-orders" onclick="showSection('orders')"><span class="nav-icon">🛒</span> অর্ডারসমূহ</div>
       <div class="nav-group-label">ম্যানেজমেন্ট</div>
       <div class="nav-item" id="nav-analytics" onclick="showSection('analytics')"><span class="nav-icon">📊</span> অ্যানালিটিক্স</div>
@@ -758,6 +759,9 @@ input::placeholder,textarea::placeholder{color:var(--text3);}
         </div>
       </div>
 
+      <!-- ======= CONVERSATIONS INBOX ======= -->
+      <div class="section" id="section-conversations"></div>
+
       <!-- ======= ORDERS ======= -->
       <div class="section" id="section-orders">
         <div class="card">
@@ -886,6 +890,7 @@ function showSection(n){
   if(n==='analytics') updateStats();
   if(n==='knowledge') populateKnowledgeAgentSelect();
   if(n==='orders') loadOrders();
+  if(n==='conversations') window.initConversationsInbox?.();
   if(n==='connect') populateSocialAgentSelect();
   if(n==='admin') loadAdminAccess();
   closeSidebar();
@@ -1493,6 +1498,7 @@ async function deleteKnowledge(id){
 </script>
 <script src="./auth-ui.js"></script>
   <script src="./user-data-sync.js"></script>
+  <script src="./conversations-inbox.js"></script>
   <script>
 function toggleMobileSidebar(forceState) {
   const sidebar = document.querySelector('.sidebar');
