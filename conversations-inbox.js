@@ -47,7 +47,7 @@
   };
   function renderDetail(x,messages){
     const detail=document.getElementById('conv-detail');if(!detail)return;
-    const history=(messages||[]).map(m=>`<div style="display:flex;justify-content:${m.role==='user'?'flex-end':'flex-start'};margin:8px 0"><div class="bubble ${m.role==='user'?'user':'bot'}" style="max-width:82%"><div style="font-size:10px;opacity:.65;margin-bottom:4px">${m.role==='user'?'Customer':'Agent'} · ${esc(new Date(m.created_at).toLocaleString())}</div>${esc(m.content)}</div></div>`).join('')||'<p style="color:var(--text3)">কোনো মেসেজ নেই।</p>';
+    const history=(messages||[]).map(m=>`<div style="display:flex;justify-content:${m.role==='user'?'flex-end':'flex-start'};margin:8px 0"><div class="bubble ${m.role==='user'?'user':'bot'}" style="max-width:82%"><div style="font-size:10px;opacity:.65;margin-bottom:4px">${m.role==='user'?'Customer':(m.role==='human'?'You':'AI Agent')} · ${esc(new Date(m.created_at).toLocaleString())}</div>${esc(m.content)}</div></div>`).join('')||'<p style="color:var(--text3)">কোনো মেসেজ নেই।</p>';
     let controls='';
     if(x.platform==='facebook'){
       if(!pageId(x)){
@@ -79,10 +79,10 @@
       const headers=await authHeaders();
       const res=await fetch(API+'/facebook/conversation-mode',{method:'PUT',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify({agentId:agent(),pageId:pageId(selected),chatId:selected.chat_id,mode,marketplaceAgentId:currentAgent().marketplaceAgentId||currentAgent().marketplace_agent_id||null})});
       const data=await res.json();if(!res.ok||!data.success)throw Error(data.error||'Mode পরিবর্তন করা যায়নি');
-      selected.mode=data.mode;toast(data.mode==='manual'?'এই conversation-এ AI বন্ধ হয়েছে।':'এই conversation-এ AI আবার চালু হয়েছে।','success');
-      renderDetail(selected,[]);
+      const key=conversationKey(selected);selected.mode=data.mode;
+      toast(data.mode==='manual'?'এই conversation-এ AI বন্ধ হয়েছে।':'এই conversation-এ AI আবার চালু হয়েছে।','success');
       await window.loadConversations();
-      const idx=conversations.findIndex(x=>conversationKey(x)===conversationKey(selected));if(idx>=0)selected=conversations[idx];
+      const idx=conversations.findIndex(x=>conversationKey(x)===key);if(idx>=0)await window.openConversation(idx);
     }catch(e){toast(e.message,'error');}
   };
   window.sendManualReply=async function(){
