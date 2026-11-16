@@ -4,7 +4,7 @@
  let pages=[],conversations=[],selected=null,selectedPage='';
  const $=id=>document.getElementById(id);
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const aid=()=>String(window.activeId||'');
+ const aid=()=>String((typeof activeId!=='undefined'?activeId:window.activeId)||'');
  const toast=(m,t)=>typeof window.toast==='function'?window.toast(m,t):alert(m);
  async function authHeaders(json=false){
   const session=await window.akexaSupabase?.auth?.getSession?.();
@@ -14,7 +14,7 @@
  }
  function renderShell(){
   const root=$('section-conversations');if(!root)return;
-  root.innerHTML=`<div class="card"><div class="card-header"><div class="card-title">💬 Messenger Inbox</div><button class="btn btn-ghost btn-sm" onclick="window.initConversationsInbox()">↻ Refresh</button></div><div class="card-body"><div style="display:flex;gap:10px;flex-wrap:wrap"><select id="mi-page" style="flex:1;min-width:180px" onchange="window.miPageChanged()"><option value="">Facebook Page নির্বাচন করুন</option></select><input id="mi-search" placeholder="Customer ID খুঁজুন" style="flex:1;min-width:150px"><button class="btn btn-primary" onclick="window.miLoad()">খুঁজুন</button></div><div id="mi-list" style="margin-top:12px"></div></div></div><div class="card" id="mi-detail-card" style="display:none"><div class="card-header"><div class="card-title" id="mi-chat-title">Conversation</div><button class="btn btn-ghost btn-sm" onclick="$('mi-detail-card').style.display='none'">✕</button></div><div class="card-body"><div id="mi-controls"></div><div id="mi-history" style="max-height:420px;overflow:auto;margin:12px 0"></div><div id="mi-compose"></div></div></div>`;
+  root.innerHTML=`<div class="card"><div class="card-header"><div class="card-title">💬 Messenger Inbox</div><button class="btn btn-ghost btn-sm" onclick="window.initConversationsInbox()">↻ Refresh</button></div><div class="card-body"><div style="display:flex;gap:10px;flex-wrap:wrap"><select id="mi-page" style="flex:1;min-width:180px" onchange="window.miPageChanged()"><option value="">Facebook Page নির্বাচন করুন</option></select><input id="mi-search" placeholder="Customer ID খুঁজুন" style="flex:1;min-width:150px"><button class="btn btn-primary" onclick="window.miLoad()">খুঁজুন</button></div><div id="mi-list" style="margin-top:12px"></div></div></div><div class="card" id="mi-detail-card" style="display:none"><div class="card-header"><div class="card-title" id="mi-chat-title">Conversation</div><button class="btn btn-ghost btn-sm" onclick="document.getElementById('mi-detail-card').style.display='none'">✕</button></div><div class="card-body"><div id="mi-controls"></div><div id="mi-history" style="max-height:420px;overflow:auto;margin:12px 0"></div><div id="mi-compose"></div></div></div>`;
  }
  async function loadPages(){
   const h=await authHeaders(),r=await fetch(API+'/facebook/pages/'+encodeURIComponent(aid()),{headers:h,cache:'no-store'}),d=await r.json();
